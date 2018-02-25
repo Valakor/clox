@@ -39,7 +39,7 @@ static InstructionRange * addInstructionRange(Lines * lines)
 
 static void addInstructionToLines(Lines * lines, int instruction, int line)
 {
-	// We assume lines are always non-decreasing as we add instruction
+	// We assume line numbers are always non-decreasing as we add instructions
 
 	ASSERT(lines->count == 0 || line >= lines->ranges[lines->count - 1].line);
 
