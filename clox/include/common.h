@@ -15,7 +15,7 @@
 #if DEBUG
 	#define DEBUG_BREAK() __builtin_debugtrap()
 
-	extern void DoAssert(const char * file, int line, const char * function, const char * format, ...) __attribute__((format(printf, 3, 5)));
+	extern void DoAssert(const char * file, int line, const char * function, const char * format, ...) __attribute__((format(printf, 4, 5)));
 
 	#define ASSERT_MACRO(f, format, ...) \
 	do { \
