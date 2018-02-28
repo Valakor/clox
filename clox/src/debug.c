@@ -24,7 +24,7 @@ void disassembleChunk(Chunk * chunk, const char * name)
 
 static int constantInstruction(const char * name, Chunk * chunk, int offset, bool isLong)
 {
-	uint32_t constant;
+	int constant;
 	int constantBytes;
 
 	if (isLong)
