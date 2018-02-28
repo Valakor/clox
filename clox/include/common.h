@@ -12,14 +12,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+
+
+#define PRINTF_LIKE(iFormat, iArgs) __attribute__((format(printf, iFormat, iArgs)))
+#define LIKELY(f) __builtin_expect(!!(f), 1)
+#define UNLIKELY(f) __builtin_expect(!!(f), 0)
+
 #if DEBUG
 	#define DEBUG_BREAK() __builtin_debugtrap()
 
-	extern void DoAssert(const char * file, int line, const char * function, const char * format, ...) __attribute__((format(printf, 4, 5)));
+	void DoAssert(const char * file, int line, const char * function, const char * format, ...) PRINTF_LIKE(4, 5);
 
 	#define ASSERT_MACRO(f, format, ...) \
 	do { \
-		if (!(f)) { \
+		if (UNLIKELY(!(f))) { \
 			DoAssert(__FILE__, __LINE__, __PRETTY_FUNCTION__, format, ##__VA_ARGS__); \
 			DEBUG_BREAK(); \
 		} \

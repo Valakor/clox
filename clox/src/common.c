@@ -8,14 +8,17 @@
 
 #include "common.h"
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+
+#include <execinfo.h>
 
 
 
 void DoAssert(const char * file, int line, const char * function, const char * format, ...)
 {
-	char buf[1024];
+	char buf[2048];
 
 	va_list args;
 	va_start(args, format);
@@ -26,9 +29,26 @@ void DoAssert(const char * file, int line, const char * function, const char * f
 
 	fprintf(
 		stderr,
-		"ASSERTION FAILED: \"%s\"\n"
+		"\nASSERTION FAILED: \"%s\"\n"
 		"\tFile: %s\n"
 		"\tLine: %d\n"
 		"\tFunction: %s\n",
 		buf, file, line, function);
+
+	// Print stack frame
+
+	const int maxFrames = 5;
+	void * callstack[maxFrames];
+
+	int frames = backtrace(callstack, maxFrames);
+	char ** aStr = backtrace_symbols(callstack, frames);
+
+	// Skip frame 0 (the DoAssert call)
+
+	for (int i = 1; i < frames; i++)
+	{
+		fprintf(stderr, "%s\n", aStr[i]);
+	}
+
+	free(aStr);
 }
