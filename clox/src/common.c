@@ -30,9 +30,9 @@ void DoAssert(const char * file, int line, const char * function, const char * f
 	fprintf(
 		stderr,
 		"\nASSERTION FAILED: \"%s\"\n"
-		"\tFile: %s\n"
-		"\tLine: %d\n"
-		"\tFunction: %s\n",
+		"    File: %s\n"
+		"    Line: %d\n"
+		"    Function: %s\n",
 		buf, file, line, function);
 
 	// Print stack frame
