@@ -65,7 +65,7 @@ static void PrintStack()
 
 		SymGetModuleInfo64(process, (DWORD64)addrs[i], &module);
 
-		PrintErr("%-3d %-35s 0x%p %s + %lld\n", i, module.ModuleName, (void*)(pSymbol->Address + displacement), pSymbol->Name, displacement);
+		PrintErr("%-3d %-35s 0x%p %s + %lld\n", i, module.ModuleName, addrs[i], pSymbol->Name, displacement);
 	}
 
 	SymCleanup(GetCurrentProcess());
