@@ -60,7 +60,12 @@ static void PrintStack()
 		if (!SymFromAddr(process, (DWORD64)addrs[i], &displacement, pSymbol))
 			continue;
 
-		PrintErr("    %d %32s    0x%p + %lld\n", i, pSymbol->Name, (void*)pSymbol->Address, displacement);
+		IMAGEHLP_MODULE64 module;
+		module.SizeOfStruct = sizeof(IMAGEHLP_MODULE64);
+
+		SymGetModuleInfo64(process, (DWORD64)addrs[i], &module);
+
+		PrintErr("%-3d %-35s 0x%p %s + %lld\n", i, module.ModuleName, (void*)(pSymbol->Address + displacement), pSymbol->Name, displacement);
 	}
 
 	SymCleanup(GetCurrentProcess());
