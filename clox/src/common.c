@@ -16,7 +16,7 @@
 
 #if DEBUG || _DEBUG
 
-void PrintErr(const char * format, ...) PRINTF_LIKE(1, 2);
+static void PrintErr(const char * format, ...) PRINTF_LIKE(1, 2);
 
 
 
