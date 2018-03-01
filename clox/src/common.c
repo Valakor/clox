@@ -21,6 +21,7 @@ static void PrintErr(const char * format, ...) PRINTF_LIKE(1, 2);
 
 
 #define STACK_CAPTURE_DEPTH 4
+#define STACK_CAPTURE_SKIP_DEPTH 2
 
 #ifdef _MSC_VER
 #include <Windows.h>
@@ -33,25 +34,25 @@ static void PrintStack()
 	HANDLE process = GetCurrentProcess();
 
 	// Set up the symbol options so that we can gather information from the current
-	// executable's PDB files, as well as the Microsoft symbol servers.  We also want
-	// to undecorate the symbol names we're returned.  If you want, you can add other
-	// symbol servers or paths via a semi-colon separated list in SymInitialized.
+	// executable's PDB files. We also want to undecorate the symbol names we're returned.
+	// If you want, you can add other symbol servers or paths via a semi-colon separated list
+	// in SymInitialized.
 	SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_INCLUDE_32BIT_MODULES | SYMOPT_UNDNAME);
 	if (!SymInitialize(process, NULL, TRUE)) return;
 
-	// Capture up to 25 stack frames from the current call stack.  We're going to
-	// skip the first stack frame returned because that's the GetStackWalk function
-	// itself, which we don't care about.
+	// Capture up to STACK_CAPTURE_DEPTH stack frames from the current call stack. We're
+	// going to skip the first two stack frames returned because they're the PrintStack and
+	// DoAssert functions themselves, which we don't care about.
 	PVOID addrs[STACK_CAPTURE_DEPTH] = { 0 };
-	USHORT frames = CaptureStackBackTrace(2, STACK_CAPTURE_DEPTH, addrs, NULL);
+	USHORT frames = CaptureStackBackTrace(STACK_CAPTURE_SKIP_DEPTH, STACK_CAPTURE_DEPTH, addrs, NULL);
 
 	for (USHORT i = 0; i < frames; i++) {
 		// Allocate a buffer large enough to hold the symbol information on the stack and get 
-		// a pointer to the buffer.  We also have to set the size of the symbol structure itself
+		// a pointer to the buffer. We also have to set the size of the symbol structure itself
 		// and the number of bytes reserved for the name.
 		char buffer[sizeof(SYMBOL_INFO) + 1024 * sizeof(TCHAR)];
-		PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
 
+		PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
 		pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
 		pSymbol->MaxNameLen = 1024;
 
@@ -74,15 +75,21 @@ static void PrintStack()
 #else
 #include <execinfo.h>
 
-#define PrintStack() \
-	do { \
-		void * callstack[STACK_CAPTURE_DEPTH + 1]; \
-		int frames = backtrace(callstack, STACK_CAPTURE_DEPTH + 1); \
-		char ** aStr = backtrace_symbols(callstack, frames); \
-		for (int i = 1; i < frames; i++) \
-			PrintErr("%s\n", aStr[i]); \
-		free(aStr); \
-	} while(0)
+static void PrintStack()
+{
+	void * callstack[STACK_CAPTURE_DEPTH + STACK_CAPTURE_SKIP_DEPTH];
+
+	int frames = backtrace(callstack, STACK_CAPTURE_DEPTH + STACK_CAPTURE_SKIP_DEPTH);
+	char ** aStr = backtrace_symbols(callstack + STACK_CAPTURE_SKIP_DEPTH, frames - STACK_CAPTURE_SKIP_DEPTH);
+
+	for (int i = 0; i < frames - STACK_CAPTURE_SKIP_DEPTH; i++)
+	{
+		PrintErr("%s\n", aStr[i]);
+	}
+
+	free(aStr);
+}
+
 #endif
 
 
