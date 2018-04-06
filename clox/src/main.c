@@ -17,6 +17,18 @@
 
 
 
+void printInstructionRanges(Chunk * chunk)
+{
+	Lines * lines = &chunk->lines;
+
+	for (int i = 0; i < lines->count; i++)
+	{
+		InstructionRange range = lines->ranges[i];
+
+		printf("%4d: [%d-%d)\n", range.line, range.instructionMic, range.instructionMac);
+	}
+}
+
 int main(int argc, const char * argv[])
 {
 	srand(0);
@@ -24,7 +36,7 @@ int main(int argc, const char * argv[])
 	Chunk chunk;
 	initChunk(&chunk);
 
-	writeConstant(&chunk, 1.2, 123);
+	writeConstant(&chunk, 1.2, 122);
 
 	for (int i = 0; i < UINT8_MAX + 1; i++)
 	{
@@ -32,9 +44,12 @@ int main(int argc, const char * argv[])
 		writeConstant(&chunk, value, 123);
 	}
 
-	writeChunk(&chunk, OP_RETURN, 123);
+	writeChunk(&chunk, OP_RETURN, 125);
 
 	disassembleChunk(&chunk, "test chunk");
+
+	printf("\n");
+	printInstructionRanges(&chunk);
 
 	freeChunk(&chunk);
 

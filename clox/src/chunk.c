@@ -45,6 +45,10 @@ static void addInstructionToLines(Lines * lines, int instruction, int line)
 
 	if (lines->count == 0 || line > lines->ranges[lines->count - 1].line)
 	{
+		// New instruction must come after previous instruction range max
+
+		ASSERT(lines->count == 0 || instruction >= lines->ranges[lines->count - 1].instructionMac);
+
 		InstructionRange * range = addInstructionRange(lines);
 		range->instructionMic = instruction;
 		range->instructionMac = instruction + 1;
@@ -56,20 +60,30 @@ static void addInstructionToLines(Lines * lines, int instruction, int line)
 	}
 }
 
+static int cmpInstructionRange(const void * vKey, const void * vElem)
+{
+	const InstructionRange * key = vKey;
+	const InstructionRange * elem = vElem;
+
+	if (key->line < elem->instructionMic)
+		return -1;
+	else if (key->line >= elem->instructionMac)
+		return 1;
+	return 0;
+}
+
 static int getLineForInstruction(Lines * lines, int instruction)
 {
-	// TODO optimize
+	InstructionRange rangeKey = { instruction, instruction, instruction };
+	InstructionRange * range = bsearch(&rangeKey, lines->ranges, lines->count, sizeof(InstructionRange), cmpInstructionRange);
 
-	for (int i = 0; i < lines->count; i++)
+	if (!range)
 	{
-		InstructionRange range = lines->ranges[i];
-
-		if (instruction >= range.instructionMic && instruction < range.instructionMac)
-			return range.line;
+		ASSERT(false);
+		return 0;
 	}
 
-	ASSERT(false);
-	return 0;
+	return range->line;
 }
 
 static void freeLines(Lines * lines)
