@@ -26,6 +26,9 @@
     <ClInclude Include="..\clox\include\value.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\clox\include\vm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\clox\src\chunk.c">
@@ -44,6 +47,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\clox\src\value.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\clox\src\vm.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
