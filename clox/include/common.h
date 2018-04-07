@@ -14,8 +14,6 @@
 
 
 
-#define DEBUG_TRACE_EXECUTION 1
-
 #ifdef _MSC_VER
 #define PRINTF_LIKE(iFormat, iArgs)
 #define LIKELY(f) (f)
@@ -47,11 +45,15 @@
 
 	#define ASSERT(f) ASSERT_MACRO(f, #f)
 	#define ASSERTMSG(f, format, ...) ASSERT_MACRO(f, format, ##__VA_ARGS__)
+
+	#define DEBUG_TRACE_EXECUTION 1
 #else
 	#define DEBUG_BREAK() (void)0
 
 	#define ASSERT(...) (void)0
 	#define ASSERTMSG(...) (void)0
+
+	#define DEBUG_TRACE_EXECUTION 0
 #endif
 
 #endif /* common_h */

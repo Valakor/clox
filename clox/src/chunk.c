@@ -74,7 +74,9 @@ static int cmpInstructionRange(const void * vKey, const void * vElem)
 
 static int getLineForInstruction(Lines * lines, int instruction)
 {
-	InstructionRange rangeKey = { instruction, instruction, instruction };
+	InstructionRange rangeKey;
+	rangeKey.instructionMac = rangeKey.instructionMic = rangeKey.line = instruction;
+
 	InstructionRange * range = bsearch(&rangeKey, lines->ranges, lines->count, sizeof(InstructionRange), cmpInstructionRange);
 
 	if (!range)
@@ -136,7 +138,7 @@ void writeConstant(Chunk * chunk, Value value, int line)
 		// Use more optimal 1-byte constant op
 
 		writeChunk(chunk, OP_CONSTANT, line);
-		writeChunk(chunk, constant, line);
+		writeChunk(chunk, (uint8_t)constant, line);
 	}
 	else if (constant <= 16777215) // UINT24_MAX
 	{

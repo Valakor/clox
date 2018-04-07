@@ -32,6 +32,9 @@ void printInstructionRanges(Chunk * chunk)
 
 int main(int argc, const char * argv[])
 {
+	(void)argc;
+	(void)argv;
+
 	initVM();
 
 	Chunk chunk;
