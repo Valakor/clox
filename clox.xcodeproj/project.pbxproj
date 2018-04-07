@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D179249E2078550300FE328C /* vm.c in Sources */ = {isa = PBXBuildFile; fileRef = D179249D2078550300FE328C /* vm.c */; };
 		D1E1F077203B61300028AE50 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E1F076203B61300028AE50 /* main.c */; };
 		D1E1F084203B649A0028AE50 /* chunk.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E1F083203B649A0028AE50 /* chunk.c */; };
 		D1E1F087203B670D0028AE50 /* memory.c in Sources */ = {isa = PBXBuildFile; fileRef = D1E1F086203B670D0028AE50 /* memory.c */; };
@@ -28,6 +29,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D179249C207854EF00FE328C /* vm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vm.h; sourceTree = "<group>"; };
+		D179249D2078550300FE328C /* vm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = vm.c; sourceTree = "<group>"; };
 		D1E1F073203B612F0028AE50 /* clox */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = clox; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1E1F076203B61300028AE50 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		D1E1F081203B62B30028AE50 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
@@ -86,6 +89,7 @@
 				D1E1F085203B66300028AE50 /* memory.h */,
 				D1E1F088203B68970028AE50 /* debug.h */,
 				D1E1F08B203B6A240028AE50 /* value.h */,
+				D179249C207854EF00FE328C /* vm.h */,
 			);
 			path = include;
 			sourceTree = "<group>";
@@ -99,6 +103,7 @@
 				D1E1F089203B68A20028AE50 /* debug.c */,
 				D1E1F08C203B6A2E0028AE50 /* value.c */,
 				D1F0014920435C9900876B30 /* common.c */,
+				D179249D2078550300FE328C /* vm.c */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -166,6 +171,7 @@
 				D1E1F087203B670D0028AE50 /* memory.c in Sources */,
 				D1E1F084203B649A0028AE50 /* chunk.c in Sources */,
 				D1E1F08A203B68A20028AE50 /* debug.c in Sources */,
+				D179249E2078550300FE328C /* vm.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -178,7 +184,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = NO;
@@ -208,7 +214,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -239,7 +245,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = NO;
@@ -269,7 +275,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_PREPROCESSOR_DEFINITIONS = "NDEBUG=1";

@@ -16,6 +16,11 @@ typedef enum
 {
 	OP_CONSTANT,
 	OP_CONSTANT_LONG,
+	OP_NEGATE,
+	OP_ADD,
+	OP_SUBTRACT,
+	OP_MULTIPLY,
+	OP_DIVIDE,
 	OP_RETURN,
 } OpCode;
 
@@ -48,7 +53,6 @@ void initChunk(Chunk * chunk);
 void freeChunk(Chunk * chunk);
 void writeChunk(Chunk * chunk, uint8_t byte, int line);
 void writeConstant(Chunk * chunk, Value value, int line);
-int addConstant(Chunk * chunk, Value value);
 int getLine(Chunk * chunk, int instruction);
 
 #endif /* chunk_h */

@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "vm.h"
 #include "chunk.h"
 #include "debug.h"
 
@@ -31,26 +32,28 @@ void printInstructionRanges(Chunk * chunk)
 
 int main(int argc, const char * argv[])
 {
-	srand(0);
+	initVM();
 
 	Chunk chunk;
 	initChunk(&chunk);
 
-	writeConstant(&chunk, 1.2, 122);
+	writeConstant(&chunk, 1.2, 123);
+	writeConstant(&chunk, 3.4, 123);
 
-	for (int i = 0; i < UINT8_MAX + 1; i++)
-	{
-		Value value = (Value)rand() / RAND_MAX;
-		writeConstant(&chunk, value, 123);
-	}
+	writeChunk(&chunk, OP_ADD, 123);
 
+	writeConstant(&chunk, 5.6, 123);
+
+	writeChunk(&chunk, OP_DIVIDE, 123);
+	writeChunk(&chunk, OP_NEGATE, 123);
+	
 	writeChunk(&chunk, OP_RETURN, 125);
 
 	disassembleChunk(&chunk, "test chunk");
 
-	printf("\n");
-	printInstructionRanges(&chunk);
+	interpret(&chunk);
 
+	freeVM();
 	freeChunk(&chunk);
 
 	return 0;

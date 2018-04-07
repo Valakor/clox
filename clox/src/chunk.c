@@ -128,7 +128,8 @@ void writeChunk(Chunk * chunk, uint8_t byte, int line)
 
 void writeConstant(Chunk * chunk, Value value, int line)
 {
-	int constant = addConstant(chunk, value);
+	writeValueArray(&chunk->constants, value);
+	int constant = chunk->constants.count - 1;
 
 	if (constant <= UINT8_MAX)
 	{
@@ -153,12 +154,6 @@ void writeConstant(Chunk * chunk, Value value, int line)
 	{
 		ASSERTMSG(false, "Too many constants in chunk (> 16777215)");
 	}
-}
-
-int addConstant(Chunk * chunk, Value value)
-{
-	writeValueArray(&chunk->constants, value);
-	return chunk->constants.count - 1;
 }
 
 int getLine(Chunk * chunk, int instruction)

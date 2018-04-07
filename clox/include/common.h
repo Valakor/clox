@@ -14,6 +14,8 @@
 
 
 
+#define DEBUG_TRACE_EXECUTION 1
+
 #ifdef _MSC_VER
 #define PRINTF_LIKE(iFormat, iArgs)
 #define LIKELY(f) (f)
