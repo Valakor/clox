@@ -6,8 +6,7 @@
 //  Copyright © 2018 Matthew Pohlmann. All rights reserved.
 //
 
-#ifndef vm_h
-#define vm_h
+#pragma once
 
 #include "common.h"
 #include "chunk.h"
@@ -38,5 +37,3 @@ InterpretResult interpret(Chunk * chunk);
 
 void push(Value value);
 Value pop(void);
-
-#endif /* vm_h */

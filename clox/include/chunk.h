@@ -6,8 +6,7 @@
 //  Copyright © 2018 Matthew Pohlmann. All rights reserved.
 //
 
-#ifndef chunk_h
-#define chunk_h
+#pragma once
 
 #include "common.h"
 #include "value.h"
@@ -54,5 +53,3 @@ void freeChunk(Chunk * chunk);
 void writeChunk(Chunk * chunk, uint8_t byte, int line);
 void writeConstant(Chunk * chunk, Value value, int line);
 int getLine(Chunk * chunk, int instruction);
-
-#endif /* chunk_h */

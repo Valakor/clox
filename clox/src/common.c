@@ -38,7 +38,8 @@ static void PrintStack()
 	// If you want, you can add other symbol servers or paths via a semi-colon separated list
 	// in SymInitialized.
 	SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_INCLUDE_32BIT_MODULES | SYMOPT_UNDNAME);
-	if (!SymInitialize(process, NULL, TRUE)) return;
+	if (!SymInitialize(process, NULL, TRUE))
+		return;
 
 	// Capture up to STACK_CAPTURE_DEPTH stack frames from the current call stack. We're
 	// going to skip the first two stack frames returned because they're the PrintStack and
@@ -69,7 +70,7 @@ static void PrintStack()
 		PrintErr("%-3d %-35s 0x%p %s + %lld\n", i, module.ModuleName, addrs[i], pSymbol->Name, displacement);
 	}
 
-	SymCleanup(GetCurrentProcess());
+	SymCleanup(process);
 }
 
 #else

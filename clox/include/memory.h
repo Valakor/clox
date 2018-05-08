@@ -6,8 +6,7 @@
 //  Copyright © 2018 Matthew Pohlmann. All rights reserved.
 //
 
-#ifndef memory_h
-#define memory_h
+#pragma once
 
 #include "common.h"
 
@@ -23,5 +22,3 @@
 	reallocate(pointer, sizeof(type) * (oldCount), 0)
 
 void * reallocate(void * previous, size_t oldSize, size_t newSize);
-
-#endif /* memory_h */

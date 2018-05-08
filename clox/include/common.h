@@ -6,8 +6,7 @@
 //  Copyright © 2018 Matthew Pohlmann. All rights reserved.
 //
 
-#ifndef common_h
-#define common_h
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -15,7 +14,7 @@
 
 
 #ifdef _MSC_VER
-#define PRINTF_LIKE(iFormat, iArgs)
+#define PRINTF_LIKE(...)
 #define LIKELY(f) (f)
 #define UNLIKELY(f) (f)
 #define FUNCTION_PRETTY __FUNCSIG__
@@ -56,4 +55,7 @@
 	#define DEBUG_TRACE_EXECUTION 0
 #endif
 
-#endif /* common_h */
+// Stretchy-buffers (essentially C's std::vector<T>)
+
+
+

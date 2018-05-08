@@ -6,8 +6,7 @@
 //  Copyright © 2018 Matthew Pohlmann. All rights reserved.
 //
 
-#ifndef value_h
-#define value_h
+#pragma once
 
 #include "common.h"
 
@@ -25,5 +24,3 @@ void writeValueArray(ValueArray * array, Value value);
 void freeValueArray(ValueArray * array);
 
 void printValue(Value value);
-
-#endif /* value_h */
