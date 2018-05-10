@@ -23,7 +23,7 @@ static void PrintErr(const char * format, ...) PRINTF_LIKE(1, 2);
 #define STACK_CAPTURE_DEPTH 4
 #define STACK_CAPTURE_SKIP_DEPTH 2
 
-#ifdef _MSC_VER
+#if TARGET_WINDOWS
 #include <Windows.h>
 #include <DbgHelp.h>
 
@@ -131,7 +131,7 @@ static void PrintErr(const char * format, ...)
 
 	fprintf(stderr, "%s", buf);
 
-#ifdef _MSC_VER
+#if TARGET_WINDOWS
 	if (IsDebuggerPresent())
 	{
 		OutputDebugStringA(buf);

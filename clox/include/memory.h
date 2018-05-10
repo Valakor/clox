@@ -16,9 +16,14 @@
 	((capacity) < 8 ? 8 : (capacity) * 2)
 
 #define GROW_ARRAY(previous, type, oldCount, count) \
-	(type*)reallocate(previous, sizeof(type) * (oldCount), sizeof(type) * (count))
+	(type*)xrealloc(previous, sizeof(type) * (count))
 
 #define FREE_ARRAY(type, pointer, oldCount) \
-	reallocate(pointer, sizeof(type) * (oldCount), 0)
+	xrealloc(pointer, 0)
 
-void * reallocate(void * previous, size_t oldSize, size_t newSize);
+// BB (matthewp) Consider inlining all or some of these
+
+void * xmalloc(size_t size);
+void * xcalloc(size_t elemCount, size_t elemSize);
+void * xrealloc(void * previous, size_t newSize);
+void   xfree(void * p);

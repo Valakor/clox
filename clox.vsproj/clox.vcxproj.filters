@@ -29,6 +29,9 @@
     <ClInclude Include="..\clox\include\vm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\clox\include\array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\clox\src\chunk.c">

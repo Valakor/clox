@@ -10,18 +10,39 @@
 
 #include <stdlib.h>
 
-void * reallocate(void * previous, size_t oldSize, size_t newSize)
+
+
+// TODO: perform memory management manually to avoid system malloc / free
+//  See: http://www.craftinginterpreters.com/chunks-of-bytecode.html#challenges #3
+
+void * xmalloc(size_t size)
 {
-	// TODO: perform memory management manually to avoid system malloc / free
-	//  See: http://www.craftinginterpreters.com/chunks-of-bytecode.html#challenges #3
+	void * p = malloc(size);
+	ASSERTMSG(p != NULL, "Out of memory!");
+	return p;
+}
 
-	(void)oldSize;
+void * xcalloc(size_t elemCount, size_t elemSize)
+{
+	void * p = calloc(elemCount, elemSize);
+	ASSERTMSG(p != NULL, "Out of memory!");
+	return p;
+}
 
+void * xrealloc(void * previous, size_t newSize)
+{
 	if (newSize == 0)
 	{
-		free(previous);
+		xfree(previous);
 		return NULL;
 	}
 
-	return realloc(previous, newSize);
+	void * p = realloc(previous, newSize);
+	ASSERTMSG(p != NULL, "Out of memory!");
+	return p;
+}
+
+void xfree(void * p)
+{
+	free(p);
 }
