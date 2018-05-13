@@ -15,16 +15,17 @@
 #include "vm.h"
 #include "chunk.h"
 #include "debug.h"
+#include "array.h"
 
 
 
 void printInstructionRanges(Chunk * chunk)
 {
-	Lines * lines = &chunk->lines;
+	InstructionRange * aryInstrange = chunk->aryInstrange;
 
-	for (int i = 0; i < lines->count; i++)
+	for (int i = 0; i < ARY_LEN(aryInstrange); i++)
 	{
-		InstructionRange range = lines->ranges[i];
+		InstructionRange range = aryInstrange[i];
 
 		printf("%4d: [%d-%d)\n", range.line, range.instructionMic, range.instructionMac);
 	}

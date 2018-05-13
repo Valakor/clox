@@ -28,14 +28,7 @@ typedef struct
 	int instructionMic;
 	int instructionMac;
 	int line;
-} InstructionRange;
-
-typedef struct
-{
-	int count;
-	int capacity;
-	InstructionRange * ranges;
-} Lines;
+} InstructionRange; // tag = instrange
 
 typedef struct
 {
@@ -44,8 +37,7 @@ typedef struct
 	uint8_t * code;
 
 	ValueArray constants;
-
-	Lines lines;
+	InstructionRange * aryInstrange;
 } Chunk;
 
 void initChunk(Chunk * chunk);

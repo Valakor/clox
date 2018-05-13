@@ -10,74 +10,51 @@
 
 #include <stdlib.h>
 
-#include "memory.h"
+#include "array.h"
 
-static void initLines(Lines * lines)
-{
-	lines->count = 0;
-	lines->capacity = 0;
-	lines->ranges = NULL;
-}
 
-static InstructionRange * addInstructionRange(Lines * lines)
-{
-	if (lines->capacity < lines->count + 1)
-	{
-		int oldCapacity = lines->capacity;
-		lines->capacity = GROW_CAPACITY(oldCapacity);
-		lines->ranges = GROW_ARRAY(lines->ranges, InstructionRange, oldCapacity, lines->capacity);
-	}
 
-	InstructionRange * range = &lines->ranges[lines->count];
-	range->instructionMic = 0;
-	range->instructionMac = 0;
-	range->line = 0;
-
-	lines->count++;
-	return range;
-}
-
-static void addInstructionToLines(Lines * lines, int instruction, int line)
+static void addInstructionToRange(InstructionRange ** paryInstrange, int instruction, int line)
 {
 	// We assume line numbers are always non-decreasing as we add instructions
 
-	ASSERT(lines->count == 0 || line >= lines->ranges[lines->count - 1].line);
+	ASSERT(ARY_EMPTY(*paryInstrange) || line >= ARY_TAIL(*paryInstrange)->line);
 
-	if (lines->count == 0 || line > lines->ranges[lines->count - 1].line)
+	if (ARY_EMPTY(*paryInstrange) || line > ARY_TAIL(*paryInstrange)->line)
 	{
 		// New instruction must come after previous instruction range max
 
-		ASSERT(lines->count == 0 || instruction >= lines->ranges[lines->count - 1].instructionMac);
+		ASSERT(ARY_EMPTY(*paryInstrange) || instruction >= ARY_TAIL(*paryInstrange)->instructionMac);
 
-		InstructionRange * range = addInstructionRange(lines);
-		range->instructionMic = instruction;
-		range->instructionMac = instruction + 1;
-		range->line = line;
+		InstructionRange instrange = { instruction, instruction + 1, line };
+
+		ARY_PUSH(*paryInstrange, instrange);
 	}
 	else
 	{
-		lines->ranges[lines->count - 1].instructionMac++;
+		ARY_TAIL(*paryInstrange)->instructionMac++;
 	}
 }
 
 static int cmpInstructionRange(const void * vKey, const void * vElem)
 {
-	const InstructionRange * key = vKey;
-	const InstructionRange * elem = vElem;
+	const InstructionRange * key = (const InstructionRange *)vKey;
+	const InstructionRange * elem = (const InstructionRange *)vElem;
 
 	if (key->line < elem->instructionMic)
 		return -1;
 	else if (key->line >= elem->instructionMac)
 		return 1;
-	return 0;
+	else
+		return 0;
 }
 
-static int getLineForInstruction(Lines * lines, int instruction)
+static int getLineForInstruction(InstructionRange * aryInstrange, int instruction)
 {
 	InstructionRange rangeKey;
 	rangeKey.instructionMac = rangeKey.instructionMic = rangeKey.line = instruction;
 
-	InstructionRange * range = bsearch(&rangeKey, lines->ranges, lines->count, sizeof(InstructionRange), cmpInstructionRange);
+	InstructionRange * range = bsearch(&rangeKey, aryInstrange, ARY_LEN(aryInstrange), sizeof(InstructionRange), cmpInstructionRange);
 
 	if (!range)
 	{
@@ -88,28 +65,16 @@ static int getLineForInstruction(Lines * lines, int instruction)
 	return range->line;
 }
 
-static void freeLines(Lines * lines)
-{
-	FREE_ARRAY(InstructionRange, lines->ranges, lines->capacity);
-	initLines(lines);
-}
-
 void initChunk(Chunk * chunk)
 {
-	chunk->count = 0;
-	chunk->capacity = 0;
-	chunk->code = NULL;
-
-	initValueArray(&chunk->constants);
-
-	initLines(&chunk->lines);
+	CLEAR_STRUCT(*chunk);
 }
 
 void freeChunk(Chunk * chunk)
 {
 	FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
 	freeValueArray(&chunk->constants);
-	freeLines(&chunk->lines);
+	ARY_FREE(chunk->aryInstrange);
 	initChunk(chunk);
 }
 
@@ -125,7 +90,7 @@ void writeChunk(Chunk * chunk, uint8_t byte, int line)
 	chunk->code[chunk->count] = byte;
 	chunk->count++;
 
-	addInstructionToLines(&chunk->lines, chunk->count - 1, line);
+	addInstructionToRange(&chunk->aryInstrange, chunk->count - 1, line);
 }
 
 void writeConstant(Chunk * chunk, Value value, int line)
@@ -160,6 +125,9 @@ void writeConstant(Chunk * chunk, Value value, int line)
 
 int getLine(Chunk * chunk, int instruction)
 {
+	ASSERT(chunk);
 	ASSERT(instruction < chunk->count);
-	return getLineForInstruction(&chunk->lines, instruction);
+	ASSERT(chunk->aryInstrange);
+
+	return getLineForInstruction(chunk->aryInstrange, instruction);
 }
