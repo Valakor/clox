@@ -73,7 +73,7 @@ void initChunk(Chunk * chunk)
 void freeChunk(Chunk * chunk)
 {
 	ARY_FREE(chunk->aryB);
-	freeValueArray(&chunk->constants);
+	ARY_FREE(chunk->aryValConstants);
 	ARY_FREE(chunk->aryInstrange);
 	initChunk(chunk);
 }
@@ -87,8 +87,8 @@ void writeChunk(Chunk * chunk, uint8_t byte, int line)
 
 void writeConstant(Chunk * chunk, Value value, int line)
 {
-	writeValueArray(&chunk->constants, value);
-	int constant = chunk->constants.count - 1;
+	ARY_PUSH(chunk->aryValConstants, value);
+	int constant = ARY_LEN(chunk->aryValConstants) - 1;
 
 	if (constant <= UINT8_MAX)
 	{

@@ -49,10 +49,10 @@ static int constantInstruction(const char * name, Chunk * chunk, int offset, boo
 		constant = chunk->aryB[offset + 1];
 	}
 
-	ASSERT(constant < chunk->constants.count);
+	ASSERT(constant < ARY_LEN(chunk->aryValConstants));
 
 	printf("%-16s %4d '", name, constant);
-	printValue(chunk->constants.values[constant]);
+	printValue(chunk->aryValConstants[constant]);
 	printf("'\n");
 
 	return offset + 1 + constantBytes;

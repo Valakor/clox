@@ -62,8 +62,8 @@ static void resetStack(void)
 static InterpretResult run(void)
 {
 #define READ_BYTE() (*vm.ip++)
-#define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
-#define READ_CONSTANT_LONG() (vm.chunk->constants.values[((READ_BYTE() << 16) | (READ_BYTE() << 8) | (READ_BYTE()))])
+#define READ_CONSTANT() (vm.chunk->aryValConstants[READ_BYTE()])
+#define READ_CONSTANT_LONG() (vm.chunk->aryValConstants[((READ_BYTE() << 16) | (READ_BYTE() << 8) | (READ_BYTE()))])
 #define BINARY_OP(op) \
 	do { \
 		Value b = pop(); \

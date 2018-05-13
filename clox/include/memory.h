@@ -12,15 +12,6 @@
 
 
 
-#define GROW_CAPACITY(capacity) \
-	((capacity) < 8 ? 8 : (capacity) * 2)
-
-#define GROW_ARRAY(previous, type, oldCount, count) \
-	(type*)xrealloc(previous, sizeof(type) * (count))
-
-#define FREE_ARRAY(type, pointer, oldCount) \
-	xrealloc(pointer, 0)
-
 #define CLEAR_STRUCT(s) memset(&(s), 0, sizeof(s))
 
 // BB (matthewp) Consider inlining all or some of these

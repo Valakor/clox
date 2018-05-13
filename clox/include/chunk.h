@@ -33,10 +33,10 @@ typedef struct
 typedef struct
 {
 	uint8_t * aryB;
+	Value * aryValConstants;
 
-	ValueArray constants;
 	InstructionRange * aryInstrange;
-} Chunk;
+} Chunk; // tag = chunk
 
 void initChunk(Chunk * chunk);
 void freeChunk(Chunk * chunk);
