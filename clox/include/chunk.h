@@ -32,9 +32,7 @@ typedef struct
 
 typedef struct
 {
-	int count;
-	int capacity;
-	uint8_t * code;
+	uint8_t * aryB;
 
 	ValueArray constants;
 	InstructionRange * aryInstrange;

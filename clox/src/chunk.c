@@ -72,7 +72,7 @@ void initChunk(Chunk * chunk)
 
 void freeChunk(Chunk * chunk)
 {
-	FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
+	ARY_FREE(chunk->aryB);
 	freeValueArray(&chunk->constants);
 	ARY_FREE(chunk->aryInstrange);
 	initChunk(chunk);
@@ -80,17 +80,9 @@ void freeChunk(Chunk * chunk)
 
 void writeChunk(Chunk * chunk, uint8_t byte, int line)
 {
-	if (chunk->capacity < chunk->count + 1)
-	{
-		int oldCapacity = chunk->capacity;
-		chunk->capacity = GROW_CAPACITY(oldCapacity);
-		chunk->code = GROW_ARRAY(chunk->code, uint8_t, oldCapacity, chunk->capacity);
-	}
+	ARY_PUSH(chunk->aryB, byte);
 
-	chunk->code[chunk->count] = byte;
-	chunk->count++;
-
-	addInstructionToRange(&chunk->aryInstrange, chunk->count - 1, line);
+	addInstructionToRange(&chunk->aryInstrange, ARY_LEN(chunk->aryB) - 1, line);
 }
 
 void writeConstant(Chunk * chunk, Value value, int line)
@@ -126,7 +118,7 @@ void writeConstant(Chunk * chunk, Value value, int line)
 int getLine(Chunk * chunk, int instruction)
 {
 	ASSERT(chunk);
-	ASSERT(instruction < chunk->count);
+	ASSERT(instruction < ARY_LEN(chunk->aryB));
 	ASSERT(chunk->aryInstrange);
 
 	return getLineForInstruction(chunk->aryInstrange, instruction);

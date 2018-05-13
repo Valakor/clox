@@ -11,12 +11,13 @@
 #include <stdio.h>
 
 #include "value.h"
+#include "array.h"
 
 void disassembleChunk(Chunk * chunk, const char * name)
 {
 	printf("== %s ==\n", name);
 
-	for (int i = 0; i < chunk->count;)
+	for (int i = 0; i < ARY_LEN(chunk->aryB);)
 	{
 		i = disassembleInstruction(chunk, i);
 	}
@@ -31,21 +32,21 @@ static int constantInstruction(const char * name, Chunk * chunk, int offset, boo
 	{
 		constantBytes = 3;
 
-		ASSERT(offset + 1 + constantBytes <= chunk->count);
+		ASSERT(offset + 1 + constantBytes <= ARY_LEN(chunk->aryB));
 
-		constant  = chunk->code[offset + 1];
+		constant  = chunk->aryB[offset + 1];
 		constant  = constant << 8;
-		constant |= chunk->code[offset + 2];
+		constant |= chunk->aryB[offset + 2];
 		constant  = constant << 8;
-		constant |= chunk->code[offset + 3];
+		constant |= chunk->aryB[offset + 3];
 	}
 	else
 	{
 		constantBytes = 1;
 
-		ASSERT(offset + 1 + constantBytes <= chunk->count);
+		ASSERT(offset + 1 + constantBytes <= ARY_LEN(chunk->aryB));
 
-		constant = chunk->code[offset + 1];
+		constant = chunk->aryB[offset + 1];
 	}
 
 	ASSERT(constant < chunk->constants.count);
@@ -65,7 +66,7 @@ static int simpleInstruction(const char * name, int offset)
 
 int disassembleInstruction(Chunk * chunk, int offset)
 {
-	ASSERT(offset < chunk->count);
+	ASSERT(offset < ARY_LEN(chunk->aryB));
 
 	printf("%04d ", offset);
 
@@ -80,7 +81,7 @@ int disassembleInstruction(Chunk * chunk, int offset)
 		printf("%4d ", line);
 	}
 
-	uint8_t instruction = chunk->code[offset];
+	uint8_t instruction = chunk->aryB[offset];
 	switch (instruction)
 	{
 		case OP_CONSTANT:

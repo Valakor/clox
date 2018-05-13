@@ -47,7 +47,7 @@ static InterpretResult run(void);
 InterpretResult interpret(Chunk * chunk)
 {
 	vm.chunk = chunk;
-	vm.ip = chunk->code;
+	vm.ip = chunk->aryB;
 
 	InterpretResult result = run();
 
@@ -82,7 +82,7 @@ static InterpretResult run(void)
 			printf(" ]");
 		}
 		printf("\n");
-		disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
+		disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->aryB));
 #endif
 		uint8_t instruction;
 		switch (instruction = READ_BYTE())
