@@ -21,6 +21,8 @@
 #define FREE_ARRAY(type, pointer, oldCount) \
 	xrealloc(pointer, 0)
 
+#define CLEAR_STRUCT(s) memset(&(s), 0, sizeof(s))
+
 // BB (matthewp) Consider inlining all or some of these
 
 void * xmalloc(size_t size);

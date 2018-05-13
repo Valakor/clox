@@ -29,6 +29,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D168B98B20A8E84E0064E9D4 /* array.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = array.h; sourceTree = "<group>"; };
 		D179249C207854EF00FE328C /* vm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vm.h; sourceTree = "<group>"; };
 		D179249D2078550300FE328C /* vm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = vm.c; sourceTree = "<group>"; };
 		D1E1F073203B612F0028AE50 /* clox */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = clox; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -84,6 +85,7 @@
 		D1E1F07F203B62810028AE50 /* include */ = {
 			isa = PBXGroup;
 			children = (
+				D168B98B20A8E84E0064E9D4 /* array.h */,
 				D1E1F081203B62B30028AE50 /* common.h */,
 				D1E1F082203B648B0028AE50 /* chunk.h */,
 				D1E1F085203B66300028AE50 /* memory.h */,
