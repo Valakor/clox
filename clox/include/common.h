@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 
 
@@ -55,6 +56,9 @@
 
 	#define DEBUG_TRACE_EXECUTION 0
 #endif
+
+#define CASSERT(f) static_assert(f, #f)
+#define CASSERTMSG(f, msg) static_assert(f, msg)
 
 #define MIN(a, b) ((a) <= (b) ? (a) : (b))
 #define MAX(a, b) ((a) >= (b) ? (a) : (b))

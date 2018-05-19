@@ -21,7 +21,11 @@ typedef enum
 	OP_MULTIPLY,
 	OP_DIVIDE,
 	OP_RETURN,
+
+	OP_MAX,
+	OP_MIN = 0,
 } OpCode;
+CASSERT(OP_MAX <= UINT8_MAX + 1);
 
 typedef struct
 {

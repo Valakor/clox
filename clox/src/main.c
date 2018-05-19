@@ -50,6 +50,14 @@ int main(int argc, const char * argv[])
 
 	writeChunk(&chunk, OP_DIVIDE, 123);
 	writeChunk(&chunk, OP_NEGATE, 123);
+
+	writeConstant(&chunk, 2.0, 124);
+
+	writeChunk(&chunk, OP_MULTIPLY, 124);
+
+	writeConstant(&chunk, -1.0, 124);
+
+	writeChunk(&chunk, OP_SUBTRACT, 124);
 	
 	writeChunk(&chunk, OP_RETURN, 125);
 
