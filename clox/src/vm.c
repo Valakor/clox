@@ -11,6 +11,7 @@
 #include "vm.h"
 
 #include "debug.h"
+#include "compiler.h"
 
 
 
@@ -44,7 +45,13 @@ Value pop(void)
 
 static InterpretResult run(void);
 
-InterpretResult interpret(Chunk * chunk)
+InterpretResult interpret(const char * source)
+{
+	compile(source);
+	return INTERPRET_OK;
+}
+
+InterpretResult interpretChunk(Chunk * chunk)
 {
 	vm.chunk = chunk;
 	vm.ip = chunk->aryB;

@@ -16,7 +16,8 @@
 
 #define STACK_MAX 256
 
-typedef enum {
+typedef enum
+{
 	INTERPRET_OK,
 	INTERPRET_COMPILE_ERROR,
 	INTERPRET_RUNTIME_ERROR
@@ -33,7 +34,8 @@ typedef struct
 void initVM(void);
 void freeVM(void);
 
-InterpretResult interpret(Chunk * chunk);
+InterpretResult interpret(const char * source);
+InterpretResult interpretChunk(Chunk * chunk);
 
 void push(Value value);
 Value pop(void);

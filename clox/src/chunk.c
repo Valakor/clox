@@ -9,6 +9,7 @@
 #include "chunk.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "array.h"
 
@@ -122,4 +123,16 @@ int getLine(Chunk * chunk, int instruction)
 	ASSERT(chunk->aryInstrange);
 
 	return getLineForInstruction(chunk->aryInstrange, instruction);
+}
+
+void printInstructionRanges(Chunk * chunk)
+{
+	InstructionRange * aryInstrange = chunk->aryInstrange;
+
+	for (int i = 0; i < ARY_LEN(aryInstrange); i++)
+	{
+		InstructionRange range = aryInstrange[i];
+
+		printf("%4d: [%d-%d)\n", range.line, range.instructionMic, range.instructionMac);
+	}
 }
