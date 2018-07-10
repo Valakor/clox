@@ -86,7 +86,7 @@ void writeChunk(Chunk * chunk, uint8_t byte, int line)
 	addInstructionToRange(&chunk->aryInstrange, ARY_LEN(chunk->aryB) - 1, line);
 }
 
-void writeConstant(Chunk * chunk, Value value, int line)
+bool writeConstant(Chunk * chunk, Value value, int line)
 {
 	ARY_PUSH(chunk->aryValConstants, value);
 	int constant = ARY_LEN(chunk->aryValConstants) - 1;
@@ -112,8 +112,10 @@ void writeConstant(Chunk * chunk, Value value, int line)
 	}
 	else
 	{
-		ASSERTMSG(false, "Too many constants in chunk (> 16777215)");
+		return false;
 	}
+
+	return true;
 }
 
 int getLine(Chunk * chunk, int instruction)
