@@ -29,7 +29,21 @@ typedef struct
 	uint8_t * ip;
 	Value stack[STACK_MAX]; // TODO (matthewp) Allow stack growth
 	Value * stackTop;
+
+	Obj * objects;
+
+	// Stack growth ideas:
+	//  https://blog.cloudflare.com/how-stacks-are-handled-in-go/
+	//  https://wingolog.org/archives/2014/03/17/stack-overflow
+	//  1. Allocate fixed-sized stack segments as-needed; chain segments
+	//  2. Allocate and copy stack to new location (like std::vector)
+	//  3. Reserve virtual memory and commit as-needed
+	//  Q: For (1) and (2), when do I check if stack growth is required? On
+	//     every PUSH(...) seems very slow, perhaps auto-generated instruction
+	//     in preamble to function calls?
 } VM;
+
+extern VM vm;
 
 void initVM(void);
 void freeVM(void);

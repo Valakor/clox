@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D10828812159E6DE000B5155 /* object.c in Sources */ = {isa = PBXBuildFile; fileRef = D10828802159E6DD000B5155 /* object.c */; };
 		D17354D020AFCB5600036F63 /* compiler.c in Sources */ = {isa = PBXBuildFile; fileRef = D17354CF20AFCB5600036F63 /* compiler.c */; };
 		D17354D220AFCC7100036F63 /* scanner.c in Sources */ = {isa = PBXBuildFile; fileRef = D17354D120AFCC7100036F63 /* scanner.c */; };
 		D179249E2078550300FE328C /* vm.c in Sources */ = {isa = PBXBuildFile; fileRef = D179249D2078550300FE328C /* vm.c */; };
@@ -31,6 +32,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D10828802159E6DD000B5155 /* object.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = object.c; sourceTree = "<group>"; };
+		D10828822159EBC9000B5155 /* object.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = object.h; sourceTree = "<group>"; };
 		D168B98B20A8E84E0064E9D4 /* array.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = array.h; sourceTree = "<group>"; };
 		D17354CE20AFCB4800036F63 /* compiler.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = compiler.h; sourceTree = "<group>"; };
 		D17354CF20AFCB5600036F63 /* compiler.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = compiler.c; sourceTree = "<group>"; };
@@ -91,6 +94,7 @@
 		D1E1F07F203B62810028AE50 /* include */ = {
 			isa = PBXGroup;
 			children = (
+				D10828822159EBC9000B5155 /* object.h */,
 				D168B98B20A8E84E0064E9D4 /* array.h */,
 				D1E1F081203B62B30028AE50 /* common.h */,
 				D1E1F082203B648B0028AE50 /* chunk.h */,
@@ -107,6 +111,7 @@
 		D1E1F080203B62890028AE50 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				D10828802159E6DD000B5155 /* object.c */,
 				D1E1F076203B61300028AE50 /* main.c */,
 				D1E1F083203B649A0028AE50 /* chunk.c */,
 				D1E1F086203B670D0028AE50 /* memory.c */,
@@ -179,6 +184,7 @@
 			files = (
 				D1F0014A20435C9900876B30 /* common.c in Sources */,
 				D17354D220AFCC7100036F63 /* scanner.c in Sources */,
+				D10828812159E6DE000B5155 /* object.c in Sources */,
 				D1E1F08D203B6A2E0028AE50 /* value.c in Sources */,
 				D1E1F077203B61300028AE50 /* main.c in Sources */,
 				D1E1F087203B670D0028AE50 /* memory.c in Sources */,

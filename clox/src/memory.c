@@ -9,6 +9,8 @@
 #include "memory.h"
 
 #include <stdlib.h>
+#include "vm.h"
+#include "object.h"
 
 
 
@@ -29,8 +31,27 @@ void * xcalloc(size_t elemCount, size_t elemSize)
 	return p;
 }
 
-void * xrealloc(void * previous, size_t newSize)
+void xfree(void * p)
 {
+	free(p);
+}
+
+#if DEBUG_ALLOC
+int64_t s_cBAlloc = 0;
+int64_t s_cBAllocMax = 0;
+#endif // #if DEBUG_ALLOC
+
+void * xrealloc(void * previous, size_t oldSize, size_t newSize)
+{
+#if DEBUG_ALLOC
+	int64_t dCb = newSize - oldSize;
+
+	s_cBAllocMax = MAX(s_cBAlloc, s_cBAlloc + dCb);
+	s_cBAlloc += dCb;
+
+	ASSERTMSG(s_cBAlloc >= 0, "Allocated bytes went negative!");
+#endif // DEBUG_ALLOC
+
 	if (newSize == 0)
 	{
 		xfree(previous);
@@ -42,7 +63,27 @@ void * xrealloc(void * previous, size_t newSize)
 	return p;
 }
 
-void xfree(void * p)
+static void freeObject(Obj * object)
 {
-	free(p);
+	switch (object->type)
+	{
+		case OBJ_STRING:
+		{
+			ObjString * string = (ObjString*)object;
+			size_t cB = offsetof(ObjString, chars) + string->length + 1;
+			xrealloc(object, cB, 0);
+			break;
+		}
+	}
+}
+
+void freeObjects(void)
+{
+	Obj * object = vm.objects;
+	while (object != NULL)
+	{
+		Obj * next = object->next;
+		freeObject(object);
+		object = next;
+	}
 }

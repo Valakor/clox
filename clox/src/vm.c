@@ -8,11 +8,14 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include "vm.h"
 
 #include "debug.h"
 #include "compiler.h"
+#include "object.h"
+#include "memory.h"
 
 
 
@@ -23,11 +26,17 @@ static void resetStack(void);
 void initVM()
 {
 	resetStack();
+	vm.objects = NULL;
 }
 
 void freeVM()
 {
+	freeObjects();
 
+#if DEBUG_ALLOC
+	ASSERTMSG(s_cBAlloc == 0, "Memory leak detected! (s_cBAlloc=%llu)", s_cBAlloc);
+	printf("[Memory] Max allocated bytes: %llu\n", s_cBAllocMax);
+#endif // #if DEBUG_ALLOC
 }
 
 void push(Value value)
@@ -52,6 +61,23 @@ static Value peek(int distance)
 static bool isFalsey(Value value)
 {
 	return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+static void concatenate(void)
+{
+	ObjString * b = AS_STRING(pop());
+	ObjString * a = AS_STRING(pop());
+
+	int length = a->length + b->length;
+
+	ObjString * result = allocateString(length + 1);
+
+	memcpy(result->chars, a->chars, a->length);
+	memcpy(result->chars + a->length, b->chars, b->length);
+	result->chars[length] = '\0';
+	result->length = length;
+
+	push(OBJ_VAL(result));
 }
 
 static InterpretResult run(void);
@@ -178,7 +204,25 @@ static InterpretResult run(void)
 				push(NUMBER_VAL(-AS_NUMBER(pop())));
 				break;
 
-			case OP_ADD: BINARY_OP(NUMBER_VAL, +); break;
+			case OP_ADD:
+			{
+				if (IS_STRING(peek(0)) && IS_STRING(peek(1)))
+				{
+					concatenate();
+				}
+				else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1)))
+				{
+					double b = AS_NUMBER(pop());
+					double a = AS_NUMBER(pop());
+					push(NUMBER_VAL(a + b));
+				}
+				else
+				{
+					runtimeError("Operands must be two numbers or two strings");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				break;
+			}
 			case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
 			case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
 			case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;

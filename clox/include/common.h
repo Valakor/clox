@@ -49,6 +49,7 @@
 
 	#define DEBUG_TRACE_EXECUTION 1
 	#define DEBUG_PRINT_CODE 1
+	#define DEBUG_ALLOC 1
 #else
 	#define DEBUG_BREAK() (void)0
 
@@ -57,6 +58,7 @@
 
 	#define DEBUG_TRACE_EXECUTION 0
 	#define DEBUG_PRINT_CODE 0
+	#define DEBUG_ALLOC 0
 #endif
 
 #define CASSERT(f) static_assert(f, #f)

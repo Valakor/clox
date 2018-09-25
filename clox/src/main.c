@@ -30,6 +30,9 @@ static void repl()
 			break;
 		}
 
+		if (strncmp(line, "quit", 4) == 0)
+			break;
+
 		interpret(line);
 	}
 }

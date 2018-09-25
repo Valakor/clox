@@ -32,7 +32,7 @@ typedef struct
 #define ARY_CAP(ary) ((ary) ? ARY__HDR(ary)->cap : 0)
 #define ARY_END(ary) ((ary) + ARY_LEN(ary))
 #define ARY_TAIL(ary) (ASSERT(!ARY_EMPTY(ary)), ((ary) + ARY_LEN(ary) - 1))
-#define ARY_FREE(ary) ((ary) ? (xfree(ARY__HDR(ary)), (ary) = NULL) : 0)
+#define ARY_FREE(ary) ((ary) ? (Ary__Free(ary, sizeof(*(ary))), (ary) = NULL) : 0)
 #define ARY_PUSH(ary, x) ((ARY__ENSURECAP((ary), ARY_LEN(ary) + 1)), (ary)[ARY__HDR(ary)->len++] = (x))
 #define ARY_POP(ary) ((ARY_LEN(ary) > 0) ? ARY__HDR(ary)->len-- : 0)
 #define ARY_EMPTY(ary) (ARY_LEN(ary) == 0)
@@ -57,20 +57,31 @@ static inline void * Ary__AllocGrow(void * ary, uint32_t newCapMin, uint32_t ele
 	ASSERTMSG(newCap <= (SIZE_MAX - offsetof(AryHdr, aB)) / elemSize, "Array allocation size overflow");
 
 	size_t sizeAlloc = newCap * elemSize + offsetof(AryHdr, aB);
+	size_t sizeAllocOld = curCap * elemSize + offsetof(AryHdr, aB);
 	
 	AryHdr * pHdr;
 
 	if (ary)
 	{
-		pHdr = xrealloc(ARY__HDR(ary), sizeAlloc);
+		pHdr = xrealloc(ARY__HDR(ary), sizeAllocOld, sizeAlloc);
 	}
 	else
 	{
-		pHdr = xmalloc(sizeAlloc);
+		pHdr = xrealloc(NULL, 0, sizeAlloc);
 		pHdr->len = 0;
 	}
 
 	pHdr->cap = newCap;
 
 	return pHdr->aB;
+}
+
+static inline void Ary__Free(void * ary, uint32_t elemSize)
+{
+	if (ary)
+	{
+		uint32_t curCap = ARY_CAP(ary);
+		size_t sizeAllocOld = curCap * elemSize + offsetof(AryHdr, aB);
+		xrealloc(ARY__HDR(ary), sizeAllocOld, 0);
+	}
 }
