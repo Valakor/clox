@@ -191,5 +191,5 @@ ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_
 		index = (index + 1) % table->capacity;
 	}
 
-	return NULL;
+	// Unreachable
 }

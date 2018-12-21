@@ -29,6 +29,11 @@ bool valuesEqual(Value a, Value b)
 			return AS_OBJ(a) == AS_OBJ(b);
 		}
 	}
+
+	// Unreachable
+
+	ASSERT(false);
+	return false;
 }
 
 void printValue(Value value)

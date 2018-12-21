@@ -17,16 +17,16 @@ void disassembleChunk(Chunk * chunk, const char * name)
 {
 	printf("== %s ==\n", name);
 
-	for (int i = 0; i < ARY_LEN(chunk->aryB);)
+	for (unsigned i = 0; i < ARY_LEN(chunk->aryB);)
 	{
 		i = disassembleInstruction(chunk, i);
 	}
 }
 
-static int constantInstruction(const char * name, Chunk * chunk, int offset, bool isLong)
+static unsigned constantInstruction(const char * name, Chunk * chunk, unsigned offset, bool isLong)
 {
-	int constant;
-	int constantBytes;
+	unsigned constant;
+	unsigned constantBytes;
 
 	if (isLong)
 	{
@@ -51,26 +51,26 @@ static int constantInstruction(const char * name, Chunk * chunk, int offset, boo
 
 	ASSERT(constant < ARY_LEN(chunk->aryValConstants));
 
-	printf("%-16s %4d '", name, constant);
+	printf("%-16s %4u '", name, constant);
 	printValue(chunk->aryValConstants[constant]);
 	printf("'\n");
 
 	return offset + 1 + constantBytes;
 }
 
-static int simpleInstruction(const char * name, int offset)
+static unsigned simpleInstruction(const char * name, unsigned offset)
 {
 	printf("%s\n", name);
 	return offset + 1;
 }
 
-int disassembleInstruction(Chunk * chunk, int offset)
+unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 {
 	ASSERT(offset < ARY_LEN(chunk->aryB));
 
 	printf("%04d ", offset);
 
-	int line = getLine(chunk, offset);
+	unsigned line = getLine(chunk, offset);
 
 	if (offset > 0 && line == getLine(chunk, offset - 1))
 	{

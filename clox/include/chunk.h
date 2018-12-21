@@ -36,9 +36,9 @@ CASSERT(OP_MAX <= UINT8_MAX + 1);
 
 typedef struct
 {
-	int instructionMic;
-	int instructionMac;
-	int line;
+	unsigned instructionMic;
+	unsigned instructionMac;
+	unsigned line;
 } InstructionRange; // tag = instrange
 
 typedef struct
@@ -51,8 +51,8 @@ typedef struct
 
 void initChunk(Chunk * chunk);
 void freeChunk(Chunk * chunk);
-void writeChunk(Chunk * chunk, uint8_t byte, int line);
-bool writeConstant(Chunk * chunk, Value value, int line);
-int getLine(Chunk * chunk, int instruction);
+void writeChunk(Chunk * chunk, uint8_t byte, unsigned line);
+bool writeConstant(Chunk * chunk, Value value, unsigned line);
+unsigned getLine(Chunk * chunk, unsigned instruction);
 
 void printInstructionRanges(Chunk * chunk);

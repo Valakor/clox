@@ -15,7 +15,7 @@
 
 
 
-static void addInstructionToRange(InstructionRange ** paryInstrange, int instruction, int line)
+static void addInstructionToRange(InstructionRange ** paryInstrange, unsigned instruction, unsigned line)
 {
 	// We assume line numbers are always non-decreasing as we add instructions
 
@@ -50,7 +50,7 @@ static int cmpInstructionRange(const void * vKey, const void * vElem)
 		return 0;
 }
 
-static int getLineForInstruction(InstructionRange * aryInstrange, int instruction)
+static unsigned getLineForInstruction(InstructionRange * aryInstrange, unsigned instruction)
 {
 	InstructionRange rangeKey;
 	rangeKey.instructionMac = rangeKey.instructionMic = rangeKey.line = instruction;
@@ -79,14 +79,14 @@ void freeChunk(Chunk * chunk)
 	initChunk(chunk);
 }
 
-void writeChunk(Chunk * chunk, uint8_t byte, int line)
+void writeChunk(Chunk * chunk, uint8_t byte, unsigned line)
 {
 	ARY_PUSH(chunk->aryB, byte);
 
 	addInstructionToRange(&chunk->aryInstrange, ARY_LEN(chunk->aryB) - 1, line);
 }
 
-bool writeConstant(Chunk * chunk, Value value, int line)
+bool writeConstant(Chunk * chunk, Value value, unsigned line)
 {
 	ARY_PUSH(chunk->aryValConstants, value);
 	int constant = ARY_LEN(chunk->aryValConstants) - 1;
@@ -118,7 +118,7 @@ bool writeConstant(Chunk * chunk, Value value, int line)
 	return true;
 }
 
-int getLine(Chunk * chunk, int instruction)
+unsigned getLine(Chunk * chunk, unsigned instruction)
 {
 	ASSERT(chunk);
 	ASSERT(instruction < ARY_LEN(chunk->aryB));
@@ -131,10 +131,10 @@ void printInstructionRanges(Chunk * chunk)
 {
 	InstructionRange * aryInstrange = chunk->aryInstrange;
 
-	for (int i = 0; i < ARY_LEN(aryInstrange); i++)
+	for (unsigned i = 0; i < ARY_LEN(aryInstrange); i++)
 	{
 		InstructionRange range = aryInstrange[i];
 
-		printf("%4d: [%d-%d)\n", range.line, range.instructionMic, range.instructionMac);
+		printf("%4d: [%u-%u)\n", range.line, range.instructionMic, range.instructionMac);
 	}
 }

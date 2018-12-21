@@ -187,7 +187,7 @@ static void endCompiler(void)
 #endif
 }
 
-static void binary()
+static void binary(void)
 {
 	// Remember the operator
 
@@ -217,7 +217,7 @@ static void binary()
 	}
 }
 
-static void literal()
+static void literal(void)
 {
 	switch (parser.previous.type)
 	{
@@ -229,7 +229,7 @@ static void literal()
 	}
 }
 
-static void grouping()
+static void grouping(void)
 {
 	expression();
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
@@ -246,7 +246,7 @@ static void string(void)
 	emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
-static void unary()
+static void unary(void)
 {
 	TokenType operatorType = parser.previous.type;
 
