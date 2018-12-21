@@ -31,7 +31,7 @@ struct sObjString
 	char chars[];
 };
 
-extern ObjString * allocateString(int numChars);
+extern ObjString * concatStrings(const ObjString * pStrA, const ObjString * pStrB);
 extern ObjString * copyString(const char * chars, int length);
 
 extern void printObject(Value value);

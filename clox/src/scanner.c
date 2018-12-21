@@ -252,5 +252,6 @@ Token scanToken(void)
 		case '"': return string();
 	}
 
+	fprintf(stderr, "Unexpected character '%c' (%u)\n", c, (unsigned)c);
 	return errorToken("Unexpected character");
 }

@@ -68,14 +68,7 @@ static void concatenate(void)
 	ObjString * b = AS_STRING(pop());
 	ObjString * a = AS_STRING(pop());
 
-	int length = a->length + b->length;
-
-	ObjString * result = allocateString(length + 1);
-
-	memcpy(result->chars, a->chars, a->length);
-	memcpy(result->chars + a->length, b->chars, b->length);
-	result->chars[length] = '\0';
-	result->length = length;
+	ObjString * result = concatStrings(a, b);
 
 	push(OBJ_VAL(result));
 }
@@ -93,10 +86,7 @@ InterpretResult interpret(const char * source)
 		return INTERPRET_COMPILE_ERROR;
 	}
 
-	vm.chunk = &chunk;
-	vm.ip = vm.chunk->aryB;
-
-	InterpretResult result = run();
+	InterpretResult result = interpretChunk(&chunk);
 
 	freeChunk(&chunk);
 

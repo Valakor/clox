@@ -28,7 +28,8 @@ bool valuesEqual(Value a, Value b)
 		{
 			ObjString * aString = AS_STRING(a);
 			ObjString * bString = AS_STRING(b);
-			return aString->length == bString->length && memcmp(aString->chars, bString->chars, aString->length);
+			return aString->length == bString->length &&
+					memcmp(aString->chars, bString->chars, aString->length) == 0;
 		}
 	}
 }

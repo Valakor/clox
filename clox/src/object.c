@@ -28,22 +28,39 @@ static Obj * allocateObject(size_t size, ObjType type)
 	return object;
 }
 
-ObjString * allocateString(int numChars)
+static ObjString * allocateString(int cCh)
 {
-	// NOTE (matthewp) Doesn't put anything in the chars array!
+	// NOTE (matthewp) Automatically adds the extra null terminator
 
-	size_t cB = offsetof(ObjString, chars) + numChars;
+	size_t cB = offsetof(ObjString, chars) + cCh + 1;
 	ObjString * string = (ObjString*)allocateObject(cB, OBJ_STRING);
+	string->length = cCh;
+	string->chars[cCh] = '\0';
+
+	if (cCh > 0)
+	{
+		string->chars[0] = '\0';
+	}
 
 	return string;
 }
 
+ObjString * concatStrings(const ObjString * pStrA, const ObjString * pStrB)
+{
+	int length = pStrA->length + pStrB->length;
+
+	ObjString * result = allocateString(length);
+
+	memcpy(result->chars, pStrA->chars, pStrA->length);
+	memcpy(result->chars + pStrA->length, pStrB->chars, pStrB->length);
+
+	return result;
+}
+
 ObjString * copyString(const char * chars, int length)
 {
-	ObjString * string = allocateString(length + 1);
+	ObjString * string = allocateString(length);
 	memcpy(string->chars, chars, length);
-	string->chars[length] = '\0';
-	string->length = length;
 
 	return string;
 }

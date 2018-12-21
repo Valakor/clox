@@ -64,7 +64,7 @@ static void endCompiler(void);
 static void emitReturn(void);
 static void expression(void);
 static void parsePrecedence(Precedence precendece);
-static ParseRule * getRule(TokenType type);
+static const ParseRule * getRule(TokenType type);
 
 bool compile(const char * source, Chunk * chunk)
 {
@@ -72,8 +72,7 @@ bool compile(const char * source, Chunk * chunk)
 
 	compilingChunk = chunk;
 
-	parser.hadError = false;
-	parser.panicMode = false;
+	memset(&parser, 0, sizeof(parser));
 
 	advance();
 	expression();
@@ -196,7 +195,7 @@ static void binary()
 
 	// Compile the right operand
 
-	ParseRule * rule = getRule(operatorType);
+	const ParseRule * rule = getRule(operatorType);
 	parsePrecedence((Precedence)(rule->precedence + 1));
 
 	// Emit the operator instruction
@@ -224,7 +223,7 @@ static void literal()
 	{
 		case TOKEN_FALSE: emitByte(OP_FALSE); break;
 		case TOKEN_NIL: emitByte(OP_NIL); break;
-		case TOKEN_TRUE: emitByte(OP_TRUE);
+		case TOKEN_TRUE: emitByte(OP_TRUE); break;
 		default:
 			return; // Unreachable
 	}
@@ -266,7 +265,8 @@ static void unary()
 	}
 }
 
-ParseRule rules[] = {
+static const ParseRule rules[] =
+{
 	{ grouping, NULL,    PREC_CALL },       // TOKEN_LEFT_PAREN
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_RIGHT_PAREN
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_LEFT_BRACE
@@ -279,7 +279,7 @@ ParseRule rules[] = {
 	{ NULL,     binary,  PREC_FACTOR },     // TOKEN_SLASH
 	{ NULL,     binary,  PREC_FACTOR },     // TOKEN_STAR
 	{ unary,    NULL,    PREC_NONE },       // TOKEN_BANG
-	{ NULL,     NULL,    PREC_EQUALITY },   // TOKEN_BANG_EQUAL
+	{ NULL,     binary,  PREC_EQUALITY },   // TOKEN_BANG_EQUAL
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_EQUAL
 	{ NULL,     binary,  PREC_EQUALITY },   // TOKEN_EQUAL_EQUAL
 	{ NULL,     binary,  PREC_COMPARISON }, // TOKEN_GREATER
@@ -293,8 +293,8 @@ ParseRule rules[] = {
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_CLASS
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_ELSE
 	{ literal,  NULL,    PREC_NONE },       // TOKEN_FALSE
-	{ NULL,     NULL,    PREC_NONE },       // TOKEN_FUN
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_FOR
+	{ NULL,     NULL,    PREC_NONE },       // TOKEN_FUN
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_IF
 	{ literal,  NULL,    PREC_NONE },       // TOKEN_NIL
 	{ NULL,     NULL,    PREC_OR },         // TOKEN_OR
@@ -313,25 +313,25 @@ static void parsePrecedence(Precedence precedence)
 {
 	advance();
 
-	ParseFn prefixRule = getRule(parser.previous.type)->prefix;
+	ParseFn prefixFn = getRule(parser.previous.type)->prefix;
 
-	if (prefixRule == NULL)
+	if (prefixFn == NULL)
 	{
 		error("Expect expression.");
 		return;
 	}
 
-	prefixRule();
+	prefixFn();
 
 	while (precedence <= getRule(parser.current.type)->precedence)
 	{
 		advance();
-		ParseFn infixRule = getRule(parser.previous.type)->infix;
-		infixRule();
+		ParseFn infixFn = getRule(parser.previous.type)->infix;
+		infixFn();
 	}
 }
 
-static ParseRule * getRule(TokenType type)
+static const ParseRule * getRule(TokenType type)
 {
 	return &rules[type];
 }
@@ -340,4 +340,3 @@ static void expression(void)
 {
 	parsePrecedence(PREC_ASSIGNMENT);
 }
-
