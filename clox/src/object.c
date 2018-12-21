@@ -12,6 +12,7 @@
 #include <string.h>
 #include "memory.h"
 #include "vm.h"
+#include "array.h"
 
 
 
@@ -28,41 +29,93 @@ static Obj * allocateObject(size_t size, ObjType type)
 	return object;
 }
 
-static ObjString * allocateString(int cCh)
+static ObjString * allocateString(const char * aCh, int cCh, uint32_t hash)
 {
-	// NOTE (matthewp) Automatically adds the extra null terminator
+	ObjString * pStr = ALLOCATE_OBJ(ObjString, OBJ_STRING);
+	pStr->hash = hash;
+	pStr->length = cCh;
+	pStr->aChars = aCh;
 
-	size_t cB = offsetof(ObjString, chars) + cCh + 1;
-	ObjString * string = (ObjString*)allocateObject(cB, OBJ_STRING);
-	string->length = cCh;
-	string->chars[cCh] = '\0';
+	tableSet(&vm.strings, pStr, NIL_VAL);
 
-	if (cCh > 0)
+	return pStr;
+}
+
+static uint32_t hashString(const char * key, int length)
+{
+	// FNV-1a
+
+	uint32_t hash = 2166136261u;
+
+	for (int i = 0; i < length; ++i)
 	{
-		string->chars[0] = '\0';
+		hash ^= key[i];
+		hash *= 16777619u;
 	}
 
-	return string;
+	return hash;
 }
 
 ObjString * concatStrings(const ObjString * pStrA, const ObjString * pStrB)
 {
 	int length = pStrA->length + pStrB->length;
+	char * aCh = CARY_ALLOCATE(char, length + 1);
 
-	ObjString * result = allocateString(length);
+	memcpy(aCh, pStrA->aChars, pStrA->length);
+	memcpy(aCh + pStrA->length, pStrB->aChars, pStrB->length);
+	aCh[length] = '\0';
+	
+	uint32_t hash = hashString(aCh, length);
 
-	memcpy(result->chars, pStrA->chars, pStrA->length);
-	memcpy(result->chars + pStrA->length, pStrB->chars, pStrB->length);
+	ObjString * pStr = tableFindString(&vm.strings, aCh, length, hash);
+	if (pStr != NULL)
+	{
+		// BB (matthewp) Could probably find a way to do this without needing to allocate memory at all
 
-	return result;
+		CARY_FREE(char, aCh, length + 1);
+		return pStr;
+	}
+
+	return allocateString(aCh, length, hash);
 }
 
 ObjString * copyString(const char * chars, int length)
 {
-	ObjString * string = allocateString(length);
-	memcpy(string->chars, chars, length);
+	uint32_t hash = hashString(chars, length);
 
-	return string;
+	ObjString * pStr = tableFindString(&vm.strings, chars, length, hash);
+	if (pStr != NULL)
+		return pStr;
+
+	char * aCh = CARY_ALLOCATE(char, length + 1);
+	memcpy(aCh, chars, length);
+	aCh[length] = '\0';
+
+	return allocateString(aCh, length, hash);
+}
+
+ObjString * takeString(const char * chars, int length)
+{
+	uint32_t hash = hashString(chars, length);
+
+	ObjString * pStr = tableFindString(&vm.strings, chars, length, hash);
+	if (pStr != NULL)
+	{
+		CARY_FREE(char, (void *)chars, length + 1);
+		return pStr;
+	}
+
+	return allocateString(chars, length, hash);
+}
+
+void freeString(ObjString ** ppStr)
+{
+	ObjString * pStr = *ppStr;
+
+	CARY_FREE(char, (void *)pStr->aChars, pStr->length + 1);
+	FREE(ObjString, pStr);
+
+	*ppStr = NULL;
 }
 
 void printObject(Value value)

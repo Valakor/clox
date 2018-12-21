@@ -11,6 +11,7 @@
 #include "common.h"
 #include "chunk.h"
 #include "value.h"
+#include "table.h"
 
 
 
@@ -29,6 +30,7 @@ typedef struct
 	uint8_t * ip;
 	Value stack[STACK_MAX]; // TODO (matthewp) Allow stack growth
 	Value * stackTop;
+	Table strings;
 
 	Obj * objects;
 

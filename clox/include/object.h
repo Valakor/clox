@@ -27,12 +27,15 @@ struct sObj
 struct sObjString
 {
 	Obj obj;
+	uint32_t hash;
 	int length;
-	char chars[];
+	const char * aChars;
 };
 
 extern ObjString * concatStrings(const ObjString * pStrA, const ObjString * pStrB);
-extern ObjString * copyString(const char * chars, int length);
+extern ObjString * copyString(const char * chars, int length); // Copy into new memory
+extern ObjString * takeString(const char * chars, int length); // Take ownership of chars memory
+extern void freeString(ObjString ** ppStr);
 
 extern void printObject(Value value);
 
@@ -46,4 +49,4 @@ static inline bool isObjType(Value value, ObjType type)
 #define IS_STRING(value)	isObjType(value, OBJ_STRING)
 
 #define AS_STRING(value)	((ObjString*)AS_OBJ(value))
-#define AS_CSTRING(value)	(((ObjString*)AS_OBJ(value))->chars)
+#define AS_CSTRING(value)	(((ObjString*)AS_OBJ(value))->aChars)

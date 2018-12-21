@@ -13,6 +13,22 @@
 
 
 
+// Basic C-style array helpers
+
+#define CARY_ALLOCATE(type, count) \
+	ALLOCATE(type, count)
+
+#define CARY_GROW_CAPACITY(capacity) \
+	((capacity) < 8 ? 8 : (capacity) * 2)
+
+#define CARY_GROW(previous, type, oldCount, count) \
+	(type*)xrealloc(previous, sizeof(type) * (oldCount), sizeof(type) * (count))
+
+#define CARY_FREE(type, pointer, oldCount) \
+	xrealloc(pointer, sizeof(type) * (oldCount), 0)
+
+
+
 // Implementation of stretchy buffers, credit to Sean Barrett
 
 typedef struct

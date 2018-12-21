@@ -9,6 +9,7 @@
 #include "memory.h"
 
 #include <stdlib.h>
+
 #include "vm.h"
 #include "object.h"
 
@@ -46,7 +47,7 @@ void * xrealloc(void * previous, size_t oldSize, size_t newSize)
 #if DEBUG_ALLOC
 	int64_t dCb = newSize - oldSize;
 
-	s_cBAllocMax = MAX(s_cBAlloc, s_cBAlloc + dCb);
+	s_cBAllocMax = MAX(s_cBAllocMax, s_cBAlloc + dCb);
 	s_cBAlloc += dCb;
 
 	ASSERTMSG(s_cBAlloc >= 0, "Allocated bytes went negative!");
@@ -70,8 +71,7 @@ static void freeObject(Obj * object)
 		case OBJ_STRING:
 		{
 			ObjString * string = (ObjString*)object;
-			size_t cB = offsetof(ObjString, chars) + string->length + 1;
-			xrealloc(object, cB, 0);
+			freeString(&string);
 			break;
 		}
 	}
