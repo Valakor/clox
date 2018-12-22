@@ -156,8 +156,7 @@ ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_
 
 	if (table->aEntries == NULL) return NULL;
 
-	// Figure out where to insert in the table. Use open addressing and basic linear
-	//  probing
+	// Figure out where to insert in the table. Use open addressing and basic linear probing
 
 	uint32_t index = hash % table->capacity;
 
@@ -165,20 +164,12 @@ ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_
 	{
 		Entry * entry = &table->aEntries[index];
 
-		if (entry->key == NULL)
-		{
-			if (IS_NIL(entry->value))
-			{
-				// Empty entry
+		// NOTE (matthewp) We ignore tombstones for string interning purposes because we never
+		//  remove anything from the string interning table!
 
-				return NULL;
-			}
-			else
-			{
-				// Skip tombstones
-			}
-		}
-		else if (entry->key->length == length &&
+		if (entry->key == NULL) return NULL;
+
+		if (entry->key->length == length &&
 			memcmp(entry->key->aChars, aCh, length) == 0)
 		{
 			// Found it
