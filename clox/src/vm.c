@@ -43,13 +43,15 @@ void freeVM()
 
 void push(Value value)
 {
+	ASSERT((int64_t)(vm.stackTop - vm.stack) < STACK_MAX);
+
 	*vm.stackTop = value;
 	vm.stackTop++;
 }
 
 Value pop(void)
 {
-	ASSERT((int)(vm.stackTop - vm.stack) > 0);
+	ASSERT((int64_t)(vm.stackTop - vm.stack) > 0);
 
 	vm.stackTop--;
 	return *vm.stackTop;
@@ -57,6 +59,8 @@ Value pop(void)
 
 static Value peek(int distance)
 {
+	ASSERT(vm.stackTop - 1 - distance >= vm.stack);
+
 	return vm.stackTop[-1 - distance];
 }
 
@@ -127,6 +131,9 @@ static void runtimeError(const char * format, ...)
 
 static InterpretResult run(void)
 {
+	// BB (matthewp) Avoid extra push-pop operations by modifying the top of the stack in-place
+	//  Example: In unary negation, instead of: push(negate(pop())), do negate(peek())
+
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->aryValConstants[READ_BYTE()])
 #define READ_CONSTANT_LONG() (vm.chunk->aryValConstants[((READ_BYTE() << 16) | (READ_BYTE() << 8) | (READ_BYTE()))])
