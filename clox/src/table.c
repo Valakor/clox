@@ -164,12 +164,12 @@ ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_
 	{
 		Entry * entry = &table->aEntries[index];
 
-		// NOTE (matthewp) We ignore tombstones for string interning purposes because we never
-		//  remove anything from the string interning table!
-
-		if (entry->key == NULL) return NULL;
-
-		if (entry->key->length == length &&
+		if (entry->key == NULL)
+		{
+			if (IS_NIL(entry->value))
+				return NULL;
+		}
+		else if (entry->key->length == length &&
 			memcmp(entry->key->aChars, aCh, length) == 0)
 		{
 			// Found it
