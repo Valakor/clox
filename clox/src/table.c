@@ -102,11 +102,16 @@ bool tableSet(Table * table, ObjString * key, Value value)
 	}
 
 	Entry * entry = findEntry(table->aEntries, table->capacity, key);
+
+	// Only increase count if this is a new key and the key is not a tombstone
+	//  (Tombstones are included in the count already)
+
 	bool isNewKey = (entry->key == NULL);
+	if (isNewKey && IS_NIL(entry->value)) table->count++;
+
 	entry->key = key;
 	entry->value = value;
 
-	if (isNewKey) table->count++;
 	return isNewKey;
 }
 
@@ -164,12 +169,17 @@ ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_
 	{
 		Entry * entry = &table->aEntries[index];
 
+		// BB (matthewp) Return Entry* instead (like findEntry does) so that we immediately know where
+		//  to insert this string when doing a string interning operation in object.c::allocateString.
+		//  This avoids doing the bucket probe twice.
+
 		if (entry->key == NULL)
 		{
 			if (IS_NIL(entry->value))
 				return NULL;
 		}
 		else if (entry->key->length == length &&
+			entry->key->hash == hash &&
 			memcmp(entry->key->aChars, aCh, length) == 0)
 		{
 			// Found it
