@@ -27,11 +27,13 @@ void initVM()
 {
 	resetStack();
 	vm.objects = NULL;
+	initTable(&vm.globals);
 	initTable(&vm.strings);
 }
 
 void freeVM()
 {
+	freeTable(&vm.globals);
 	freeTable(&vm.strings);
 	freeObjects();
 
@@ -137,6 +139,7 @@ static InterpretResult run(void)
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->aryValConstants[READ_BYTE()])
 #define READ_CONSTANT_LONG() (vm.chunk->aryValConstants[((READ_BYTE() << 16) | (READ_BYTE() << 8) | (READ_BYTE()))])
+#define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
 	do { \
 		if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -181,6 +184,47 @@ static InterpretResult run(void)
 			case OP_NIL: push(NIL_VAL); break;
 			case OP_TRUE: push(BOOL_VAL(true)); break;
 			case OP_FALSE: push(BOOL_VAL(false)); break;
+			case OP_POP: pop(); break;
+
+			// TODO: Improve global lookup by avoiding hash-table. Consider assigning every
+			//  global a unique (linear) ID during compilation and writing that to the bytecode
+			//  stream. Lookup becomes just an index into an array (need an extra bool to make
+			//  sure it's actually been defined already?).
+
+			case OP_GET_GLOBAL:
+			{
+				// TODO: Support more globals (OP_GET_GLOBAL_LONG)
+				ObjString * name = READ_STRING();
+				Value value;
+				if (!tableGet(&vm.globals, name, &value))
+				{
+					runtimeError("Undefined variable '%s'.", name->aChars);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				push(value);
+				break;
+			}
+
+			case OP_DEFINE_GLOBAL:
+			{
+				// TODO: Support more globals (OP_DEFINE_GLOBAL_LONG)
+				ObjString * name = READ_STRING();
+				tableSet(&vm.globals, name, peek(0));
+				pop();
+				break;
+			}
+
+			case OP_SET_GLOBAL:
+			{
+				// TODO: Support more globals (OP_SET_GLOBAL_LONG)
+				ObjString * name = READ_STRING();
+				if (tableSet(&vm.globals, name, peek(0)))
+				{
+					runtimeError("Undefined variable '%s'.", name->aChars);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				break;
+			}
 
 			case OP_EQUAL:
 			{
@@ -228,17 +272,20 @@ static InterpretResult run(void)
 
 			case OP_NOT: push(BOOL_VAL(isFalsey(pop()))); break;
 
-			case OP_RETURN:
+			case OP_PRINT:
 			{
 				printValue(pop());
 				printf("\n");
-				return INTERPRET_OK;
+				break;
 			}
+
+			case OP_RETURN: return INTERPRET_OK;
 		}
 	}
 
 #undef READ_BYTE
 #undef READ_CONSTANT
 #undef READ_CONSTANT_LONG
+#undef READ_STRING
 #undef BINARY_OP
 }

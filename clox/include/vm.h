@@ -30,6 +30,7 @@ typedef struct
 	uint8_t * ip;
 	Value stack[STACK_MAX]; // TODO (matthewp) Allow stack growth
 	Value * stackTop;
+	Table globals;
 	Table strings;
 
 	Obj * objects;

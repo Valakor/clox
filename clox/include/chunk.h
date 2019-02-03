@@ -18,6 +18,10 @@ typedef enum
 	OP_NIL,
 	OP_TRUE,
 	OP_FALSE,
+	OP_POP,
+	OP_GET_GLOBAL,
+	OP_DEFINE_GLOBAL,
+	OP_SET_GLOBAL,
 	OP_EQUAL,
 	OP_GREATER,
 	OP_LESS,
@@ -27,6 +31,7 @@ typedef enum
 	OP_MULTIPLY,
 	OP_DIVIDE,
 	OP_NOT,
+	OP_PRINT,
 	OP_RETURN,
 
 	OP_MAX,
@@ -52,7 +57,7 @@ typedef struct
 void initChunk(Chunk * chunk);
 void freeChunk(Chunk * chunk);
 void writeChunk(Chunk * chunk, uint8_t byte, unsigned line);
-bool writeConstant(Chunk * chunk, Value value, unsigned line);
+uint32_t addConstant(Chunk * chunk, Value value);
 unsigned getLine(Chunk * chunk, unsigned instruction);
 
 void printInstructionRanges(Chunk * chunk);

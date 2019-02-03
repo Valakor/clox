@@ -63,6 +63,9 @@
 
 #define CASSERT(f) static_assert(f, #f)
 #define CASSERTMSG(f, msg) static_assert(f, msg)
+#define UNUSED(x) (void)(x)
 
 #define MIN(a, b) ((a) <= (b) ? (a) : (b))
 #define MAX(a, b) ((a) >= (b) ? (a) : (b))
+
+#define UINT24_MAX 16777215U

@@ -86,36 +86,10 @@ void writeChunk(Chunk * chunk, uint8_t byte, unsigned line)
 	addInstructionToRange(&chunk->aryInstrange, ARY_LEN(chunk->aryB) - 1, line);
 }
 
-bool writeConstant(Chunk * chunk, Value value, unsigned line)
+uint32_t addConstant(Chunk * chunk, Value value)
 {
 	ARY_PUSH(chunk->aryValConstants, value);
-	int constant = ARY_LEN(chunk->aryValConstants) - 1;
-
-	if (constant <= UINT8_MAX)
-	{
-		// Use more optimal 1-byte constant op
-
-		writeChunk(chunk, OP_CONSTANT, line);
-		writeChunk(chunk, (uint8_t)constant, line);
-	}
-	else if (constant <= 16777215) // UINT24_MAX
-	{
-		// Use 3-byte constant op
-
-		writeChunk(chunk, OP_CONSTANT_LONG, line);
-
-		for (int i = 0; i < 3; i++)
-		{
-			uint8_t b = (constant >> (8 * (3 - i - 1))) & UINT8_MAX;
-			writeChunk(chunk, b, line);
-		}
-	}
-	else
-	{
-		return false;
-	}
-
-	return true;
+	return ARY_LEN(chunk->aryValConstants) - 1;
 }
 
 unsigned getLine(Chunk * chunk, unsigned instruction)

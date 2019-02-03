@@ -39,7 +39,7 @@ typedef enum
 	PREC_PRIMARY,
 } Precedence;
 
-typedef void (*ParseFn)(void);
+typedef void (*ParseFn)(bool canAssign);
 
 typedef struct
 {
@@ -53,6 +53,8 @@ Chunk * compilingChunk;
 
 
 static void advance(void);
+static bool check(TokenType type);
+static bool match(TokenType type);
 static void errorAtCurrent(const char * message);
 static void error(const char * message);
 static void errorAt(Token * token, const char * message);
@@ -63,7 +65,13 @@ static Chunk * currentChunk(void);
 static void endCompiler(void);
 static void emitReturn(void);
 static void expression(void);
+static void statement(void);
+static void declaration(void);
+static void varDeclaration(void);
+static void printStatement(void);
+static void expressionStatement(void);
 static void parsePrecedence(Precedence precendece);
+static uint32_t identifierConstant(Token * name);
 static const ParseRule * getRule(TokenType type);
 
 bool compile(const char * source, Chunk * chunk)
@@ -75,8 +83,11 @@ bool compile(const char * source, Chunk * chunk)
 	memset(&parser, 0, sizeof(parser));
 
 	advance();
-	expression();
-	consume(TOKEN_EOF, "Expect end of expression.");
+
+	while (!match(TOKEN_EOF))
+	{
+		declaration();
+	}
 
 	endCompiler();
 
@@ -146,9 +157,50 @@ static void consume(TokenType type, const char * message)
 	errorAtCurrent(message);
 }
 
+static bool check(TokenType type)
+{
+	return parser.current.type == type;
+}
+
+static bool match(TokenType type)
+{
+	if (!check(type)) return false;
+	advance();
+	return true;
+}
+
 static Chunk * currentChunk(void)
 {
 	return compilingChunk;
+}
+
+static void synchronize(void)
+{
+	parser.panicMode = false;
+
+	while (parser.current.type != TOKEN_EOF)
+	{
+		if (parser.previous.type == TOKEN_SEMICOLON)
+			return;
+
+		switch (parser.current.type)
+		{
+		case TOKEN_CLASS:
+		case TOKEN_FUN:
+		case TOKEN_VAR:
+		case TOKEN_FOR:
+		case TOKEN_IF:
+		case TOKEN_WHILE:
+		case TOKEN_PRINT:
+		case TOKEN_RETURN:
+			return;
+
+		default:
+			break;
+		}
+
+		advance();
+	}
 }
 
 static void emitByte(uint8_t byte)
@@ -167,12 +219,51 @@ static void emitReturn(void)
 	emitByte(OP_RETURN);
 }
 
+static uint32_t makeConstant(Value value)
+{
+	// TODO: De-duplicate equivalent constants added to the chunk
+
+	uint32_t constant = addConstant(currentChunk(), value);
+
+	if (constant > 16777215) // UINT24_MAX
+	{
+		error("Too many constants in one chunk.");
+		return 0;
+	}
+
+	return constant;
+}
+
+static void emitConstantHelper(uint32_t constant, OpCode opShort, OpCode opLong)
+{
+	if (constant <= UINT8_MAX)
+	{
+		// Use more optimal 1-byte constant op
+
+		emitBytes(opShort, (uint8_t)constant);
+	}
+	else if (constant <= UINT24_MAX)
+	{
+		// Use 3-byte constant op
+
+		emitByte(opLong);
+
+		for (int i = 0; i < 3; i++)
+		{
+			uint8_t b = (constant >> (8 * (3 - i - 1))) & UINT8_MAX;
+			emitByte(b);
+		}
+	}
+	else
+	{
+		ASSERT(false);
+	}
+}
+
 static void emitConstant(Value value)
 {
-	if (!writeConstant(currentChunk(), value, parser.previous.line))
-	{
-		error("Too many constants in one chunk");
-	}
+	uint32_t constant = makeConstant(value);
+	emitConstantHelper(constant, OP_CONSTANT, OP_CONSTANT_LONG);
 }
 
 static void endCompiler(void)
@@ -187,8 +278,10 @@ static void endCompiler(void)
 #endif
 }
 
-static void binary(void)
+static void binary(bool canAssign)
 {
+	UNUSED(canAssign);
+
 	// Remember the operator
 
 	TokenType operatorType = parser.previous.type;
@@ -217,8 +310,10 @@ static void binary(void)
 	}
 }
 
-static void literal(void)
+static void literal(bool canAssign)
 {
+	UNUSED(canAssign);
+
 	switch (parser.previous.type)
 	{
 		case TOKEN_FALSE: emitByte(OP_FALSE); break;
@@ -229,25 +324,61 @@ static void literal(void)
 	}
 }
 
-static void grouping(void)
+static void grouping(bool canAssign)
 {
+	UNUSED(canAssign);
+
 	expression();
 	consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-static void number(void)
+static void number(bool canAssign)
 {
+	UNUSED(canAssign);
+
 	double value = strtod(parser.previous.start, NULL);
 	emitConstant(NUMBER_VAL(value));
 }
 
-static void string(void)
+static void string(bool canAssign)
 {
+	UNUSED(canAssign);
+
 	emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
-static void unary(void)
+static void namedVariable(Token name, bool canAssign)
 {
+	// TODO: Support OP_DEFINE_GLOBAL_LONG opcode
+
+	uint32_t arg = identifierConstant(&name);
+
+	if (arg > UINT8_MAX)
+	{
+		error("Too many global variables defined.");
+		arg = 0;
+	}
+
+	if (canAssign && match(TOKEN_EQUAL))
+	{
+		expression();
+		emitBytes(OP_SET_GLOBAL, (uint8_t)arg);
+	}
+	else
+	{
+		emitBytes(OP_GET_GLOBAL, (uint8_t)arg);
+	}
+}
+
+static void variable(bool canAssign)
+{
+	namedVariable(parser.previous, canAssign);
+}
+
+static void unary(bool canAssign)
+{
+	UNUSED(canAssign);
+
 	TokenType operatorType = parser.previous.type;
 
 	// Compile the operand
@@ -286,7 +417,7 @@ static const ParseRule rules[] =
 	{ NULL,     binary,  PREC_COMPARISON }, // TOKEN_GREATER_EQUAL
 	{ NULL,     binary,  PREC_COMPARISON }, // TOKEN_LESS
 	{ NULL,     binary,  PREC_COMPARISON }, // TOKEN_LESS_EQUAL
-	{ NULL,     NULL,    PREC_NONE },       // TOKEN_IDENTIFIER
+	{ variable, NULL,    PREC_NONE },       // TOKEN_IDENTIFIER
 	{ string,   NULL,    PREC_NONE },       // TOKEN_STRING
 	{ number,   NULL,    PREC_NONE },       // TOKEN_NUMBER
 	{ NULL,     NULL,    PREC_AND },        // TOKEN_AND
@@ -321,14 +452,45 @@ static void parsePrecedence(Precedence precedence)
 		return;
 	}
 
-	prefixFn();
+	bool canAssign = (precedence <= PREC_ASSIGNMENT);
+	prefixFn(canAssign);
 
 	while (precedence <= getRule(parser.current.type)->precedence)
 	{
 		advance();
 		ParseFn infixFn = getRule(parser.previous.type)->infix;
-		infixFn();
+		infixFn(canAssign);
 	}
+
+	if (canAssign && match(TOKEN_EQUAL))
+	{
+		error("Invalid assignment target.");
+		expression();
+	}
+}
+
+static uint32_t identifierConstant(Token * name)
+{
+	return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+}
+
+static uint32_t parseVariable(const char * errorMessage)
+{
+	consume(TOKEN_IDENTIFIER, errorMessage);
+	return identifierConstant(&parser.previous);
+}
+
+static void defineVariable(uint32_t global)
+{
+	// TODO: Support OP_DEFINE_GLOBAL_LONG opcode
+
+	if (global > UINT8_MAX)
+	{
+		error("Too many global variables defined.");
+		global = 0;
+	}
+
+	emitBytes(OP_DEFINE_GLOBAL, (uint8_t)global);
 }
 
 static const ParseRule * getRule(TokenType type)
@@ -339,4 +501,65 @@ static const ParseRule * getRule(TokenType type)
 static void expression(void)
 {
 	parsePrecedence(PREC_ASSIGNMENT);
+}
+
+static void declaration(void)
+{
+	if (match(TOKEN_VAR))
+	{
+		varDeclaration();
+	}
+	else
+	{
+		statement();
+	}
+
+	if (parser.panicMode)
+	{
+		synchronize();
+	}
+}
+
+static void varDeclaration(void)
+{
+	uint32_t global = parseVariable("Expect variable name.");
+
+	if (match(TOKEN_EQUAL))
+	{
+		expression();
+	}
+	else
+	{
+		emitByte(OP_NIL);
+	}
+
+	consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+
+	defineVariable(global);
+}
+
+static void statement(void)
+{
+	if (match(TOKEN_PRINT))
+	{
+		printStatement();
+	}
+	else
+	{
+		expressionStatement();
+	}
+}
+
+static void printStatement(void)
+{
+	expression();
+	consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+	emitByte(OP_PRINT);
+}
+
+static void expressionStatement(void)
+{
+	expression();
+	consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+	emitByte(OP_POP);
 }
