@@ -30,7 +30,7 @@ static void repl()
 			break;
 		}
 
-		if (strncmp(line, "quit", 4) == 0)
+		if (strcmp(line, "quit()\n") == 0)
 			break;
 
 		interpret(line);
@@ -63,6 +63,7 @@ static char * readFile(const char * path)
 
 	if (read < length)
 	{
+		free(buffer);
 		fprintf(stderr, "Could not read file '%s'\n", path);
 		exit(74);
 	}

@@ -1,3 +1,8 @@
 
-
-
+var x = 1;
+var y = 2;
+x = 42;
+print x + y;
+var z = x * (x + y);
+print z;
+print "bagels" + " and lox";

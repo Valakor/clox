@@ -124,9 +124,9 @@ static void runtimeError(const char * format, ...)
 	va_end(args);
 	fputs("\n", stderr);
 
-	int instruction = (int)(vm.ip - 1 - vm.chunk->aryB);
-	int line = getLine(vm.chunk, instruction);
-	fprintf(stderr, "[line %d] in script\n", line);
+	unsigned instruction = (int)(vm.ip - 1 - vm.chunk->aryB);
+	unsigned line = getLine(vm.chunk, instruction);
+	fprintf(stderr, "[line %u] in script\n", line);
 
 	resetStack();
 }
@@ -162,7 +162,7 @@ static InterpretResult run(void)
 			printf(" ]");
 		}
 		printf("\n");
-		disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->aryB));
+		disassembleInstruction(vm.chunk, (unsigned)(vm.ip - vm.chunk->aryB));
 #endif
 		uint8_t instruction;
 		switch (instruction = READ_BYTE())
