@@ -88,6 +88,19 @@ void writeChunk(Chunk * chunk, uint8_t byte, unsigned line)
 
 uint32_t addConstant(Chunk * chunk, Value value)
 {
+	// TODO: De-duplicate constants more efficiently
+
+	/*
+	Value * aryVal = chunk->aryValConstants;
+	uint32_t cVal = ARY_LEN(aryVal);
+
+	for (uint32_t iVal = 0; iVal < cVal; ++iVal)
+	{
+		if (valuesEqual(aryVal[iVal], value))
+			return iVal;
+	}
+	*/
+
 	ARY_PUSH(chunk->aryValConstants, value);
 	return ARY_LEN(chunk->aryValConstants) - 1;
 }
