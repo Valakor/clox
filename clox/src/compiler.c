@@ -48,7 +48,21 @@ typedef struct
 	Precedence precedence;
 } ParseRule;
 
+typedef struct
+{
+	Token name;
+	int depth;
+} Local;
+
+typedef struct Compiler
+{
+	Local locals[UINT8_COUNT];
+	int localCount;
+	int scopeDepth;
+} Compiler;
+
 Parser parser;
+Compiler * current = NULL;
 Chunk * compilingChunk;
 
 
@@ -62,6 +76,7 @@ static void consume(TokenType type, const char * message);
 static void emitByte(uint8_t byte);
 static void emitBytes(uint8_t byte1, uint8_t byte2);
 static Chunk * currentChunk(void);
+static void initCompiler(Compiler * compiler);
 static void endCompiler(void);
 static void emitReturn(void);
 static void expression(void);
@@ -72,11 +87,16 @@ static void printStatement(void);
 static void expressionStatement(void);
 static void parsePrecedence(Precedence precendece);
 static uint32_t identifierConstant(Token * name);
+static bool resolveLocal(Compiler * compiler, Token * name, uint32_t * localIndex);
+static void declareVariable(void);
 static const ParseRule * getRule(TokenType type);
 
 bool compile(const char * source, Chunk * chunk)
 {
 	initScanner(source);
+
+	Compiler compiler;
+	initCompiler(&compiler);
 
 	compilingChunk = chunk;
 
@@ -266,6 +286,13 @@ static void emitConstant(Value value)
 	emitConstantHelper(constant, OP_CONSTANT, OP_CONSTANT_LONG);
 }
 
+static void initCompiler(Compiler * compiler)
+{
+	compiler->localCount = 0;
+	compiler->scopeDepth = 0;
+	current = compiler;
+}
+
 static void endCompiler(void)
 {
 	emitReturn();
@@ -276,6 +303,25 @@ static void endCompiler(void)
 		disassembleChunk(currentChunk(), "code");
 	}
 #endif
+}
+
+static void beginScope(void)
+{
+	current->scopeDepth++;
+}
+
+static void endScope(void)
+{
+	current->scopeDepth--;
+
+	// TODO: Optimization. Add OP_POPN that can pop N things at once
+
+	while (current->localCount > 0 &&
+		   current->locals[current->localCount - 1].depth > current->scopeDepth)
+	{
+		emitByte(OP_POP);
+		current->localCount--;
+	}
 }
 
 static void binary(bool canAssign)
@@ -349,24 +395,39 @@ static void string(bool canAssign)
 
 static void namedVariable(Token name, bool canAssign)
 {
-	// TODO: Support OP_DEFINE_GLOBAL_LONG opcode
+	uint8_t getOp, setOp;
+	uint32_t arg;
 
-	uint32_t arg = identifierConstant(&name);
-
-	if (arg > UINT8_MAX)
+	if (resolveLocal(current, &name, &arg))
 	{
-		error("Too many global variables defined.");
-		arg = 0;
+		getOp = OP_GET_LOCAL;
+		setOp = OP_SET_LOCAL;
+
+		ASSERT(arg < UINT8_COUNT);
+	}
+	else
+	{
+		arg = identifierConstant(&name);
+		getOp = OP_GET_GLOBAL;
+		setOp = OP_SET_GLOBAL;
+
+		// TODO: Support OP_DEFINE_GLOBAL_LONG opcode
+
+		if (arg >= UINT8_COUNT)
+		{
+			error("Too many global variables defined.");
+			return;
+		}
 	}
 
 	if (canAssign && match(TOKEN_EQUAL))
 	{
 		expression();
-		emitBytes(OP_SET_GLOBAL, (uint8_t)arg);
+		emitBytes(setOp, (uint8_t)arg);
 	}
 	else
 	{
-		emitBytes(OP_GET_GLOBAL, (uint8_t)arg);
+		emitBytes(getOp, (uint8_t)arg);
 	}
 }
 
@@ -474,20 +535,107 @@ static uint32_t identifierConstant(Token * name)
 	return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
+static bool identifiersEqual(Token * a, Token * b)
+{
+	if (a->length != b->length)
+		return false;
+
+	return memcmp(a->start, b->start, a->length) == 0;
+}
+
+static bool resolveLocal(Compiler * compiler, Token * name, uint32_t * localIndex)
+{
+	for (int i = compiler->localCount - 1; i >= 0; i--)
+	{
+		Local * local = &compiler->locals[i];
+
+		if (identifiersEqual(name, &local->name))
+		{
+			if (local->depth == -1)
+			{
+				error("Cannot read local variable in its own initializer.");
+			}
+
+			*localIndex = i;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static void addLocal(Token name)
+{
+	if (current->localCount == UINT8_COUNT)
+	{
+		error("Too many local variables in scope.");
+		return;
+	}
+
+	Local * local = &current->locals[current->localCount++];
+	local->name = name;
+	local->depth = -1;
+}
+
+static void declareVariable(void)
+{
+	// Global variables are implicitly declared
+
+	if (current->scopeDepth == 0)
+		return;
+
+	Token * name = &parser.previous;
+
+	for (int i = current->localCount - 1; i >= 0; i--)
+	{
+		Local * local = &current->locals[i];
+
+		if (local->depth != -1 && local->depth < current->scopeDepth)
+			break;
+
+		if (identifiersEqual(name, &local->name))
+		{
+			error("Variable with this name already declared in this scope.");
+		}
+	}
+
+	addLocal(*name);
+}
+
 static uint32_t parseVariable(const char * errorMessage)
 {
 	consume(TOKEN_IDENTIFIER, errorMessage);
+
+	declareVariable();
+
+	if (current->scopeDepth > 0)
+		return 0;
+
 	return identifierConstant(&parser.previous);
+}
+
+static void markInitialized(void)
+{
+	if (current->scopeDepth == 0)
+		return;
+
+	current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
 static void defineVariable(uint32_t global)
 {
+	if (current->scopeDepth > 0)
+	{
+		markInitialized();
+		return;
+	}
+
 	// TODO: Support OP_DEFINE_GLOBAL_LONG opcode
 
-	if (global > UINT8_MAX)
+	if (global >= UINT8_COUNT)
 	{
 		error("Too many global variables defined.");
-		global = 0;
+		return;
 	}
 
 	emitBytes(OP_DEFINE_GLOBAL, (uint8_t)global);
@@ -501,6 +649,16 @@ static const ParseRule * getRule(TokenType type)
 static void expression(void)
 {
 	parsePrecedence(PREC_ASSIGNMENT);
+}
+
+static void block(void)
+{
+	while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
+	{
+		declaration();
+	}
+
+	consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
 static void declaration(void)
@@ -543,6 +701,12 @@ static void statement(void)
 	if (match(TOKEN_PRINT))
 	{
 		printStatement();
+	}
+	else if (match(TOKEN_LEFT_BRACE))
+	{
+		beginScope();
+		block();
+		endScope();
 	}
 	else
 	{

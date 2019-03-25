@@ -68,4 +68,7 @@
 #define MIN(a, b) ((a) <= (b) ? (a) : (b))
 #define MAX(a, b) ((a) >= (b) ? (a) : (b))
 
+#define UINT8_COUNT (UINT8_MAX + 1U)
+
 #define UINT24_MAX 16777215U
+#define UINT24_COUNT (UINT24_MAX + 1U)

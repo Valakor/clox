@@ -64,6 +64,13 @@ static unsigned simpleInstruction(const char * name, unsigned offset)
 	return offset + 1;
 }
 
+static unsigned byteInstruction(const char * name, Chunk * chunk, unsigned offset)
+{
+	uint8_t slot = chunk->aryB[offset + 1];
+	printf("%-16s %4d\n", name, slot);
+	return offset + 2;
+}
+
 unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 {
 	ASSERT(offset < ARY_LEN(chunk->aryB));
@@ -96,6 +103,10 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return simpleInstruction("OP_FALSE", offset);
 		case OP_POP:
 			return simpleInstruction("OP_POP", offset);
+		case OP_GET_LOCAL:
+			return byteInstruction("OP_GET_LOCAL", chunk, offset);
+		case OP_SET_LOCAL:
+			return byteInstruction("OP_SET_LOCAL", chunk, offset);
 		case OP_GET_GLOBAL:
 			return constantInstruction("OP_GET_GLOBAL", chunk, offset, false);
 		case OP_DEFINE_GLOBAL:

@@ -186,6 +186,20 @@ static InterpretResult run(void)
 			case OP_FALSE: push(BOOL_VAL(false)); break;
 			case OP_POP: pop(); break;
 
+			case OP_GET_LOCAL:
+			{
+				uint8_t slot = READ_BYTE();
+				push(vm.stack[slot]);
+				break;
+			}
+
+			case OP_SET_LOCAL:
+			{
+				uint8_t slot = READ_BYTE();
+				vm.stack[slot] = peek(0);
+				break;
+			}
+
 			// TODO: Improve global lookup by avoiding hash-table. Consider assigning every
 			//  global a unique (linear) ID during compilation and writing that to the bytecode
 			//  stream. Lookup becomes just an index into an array (need an extra bool to make
