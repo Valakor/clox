@@ -56,6 +56,9 @@ typedef struct
 
 typedef struct Compiler
 {
+	// TODO: Enhancement. Allow more local variables
+	// TODO: Optimization. Make lookup faster (currently requires linear search through array)
+	// TODO: Enhancement. Add concept of variables that don't allow re-assignment ('let'?)
 	Local locals[UINT8_COUNT];
 	int localCount;
 	int scopeDepth;
@@ -314,13 +317,32 @@ static void endScope(void)
 {
 	current->scopeDepth--;
 
-	// TODO: Optimization. Add OP_POPN that can pop N things at once
+	unsigned numLocals = 0;
 
 	while (current->localCount > 0 &&
 		   current->locals[current->localCount - 1].depth > current->scopeDepth)
 	{
-		emitByte(OP_POP);
+		numLocals++;
 		current->localCount--;
+	}
+
+	if (numLocals == 0)
+		return;
+
+	if (numLocals == 1)
+	{
+		emitByte(OP_POP);
+	}
+	else
+	{
+		// Assumption: Only 256 locals possible
+		// NOTE: POPN stores N - 2
+
+		ASSERT(numLocals <= UINT8_COUNT);
+
+		uint8_t arg = (uint8_t)(numLocals - 2);
+
+		emitBytes(OP_POPN, arg);
 	}
 }
 
@@ -568,7 +590,7 @@ static void addLocal(Token name)
 {
 	if (current->localCount == UINT8_COUNT)
 	{
-		error("Too many local variables in scope.");
+		error("Too many local variables in function.");
 		return;
 	}
 

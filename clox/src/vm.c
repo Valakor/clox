@@ -186,6 +186,16 @@ static InterpretResult run(void)
 			case OP_FALSE: push(BOOL_VAL(false)); break;
 			case OP_POP: pop(); break;
 
+			case OP_POPN:
+			{
+				uint32_t num = READ_BYTE() + 2;
+				while (num--)
+				{
+					pop();
+				}
+				break;
+			}
+
 			case OP_GET_LOCAL:
 			{
 				uint8_t slot = READ_BYTE();

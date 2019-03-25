@@ -18,7 +18,8 @@ typedef enum
 	OP_NIL,
 	OP_TRUE,
 	OP_FALSE,
-	OP_POP,
+	OP_POP,				// Pop once
+	OP_POPN,			// Pop N times (stores N - 2 in bytecode)
 	OP_GET_LOCAL,
 	OP_SET_LOCAL,
 	OP_GET_GLOBAL,
