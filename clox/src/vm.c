@@ -244,6 +244,7 @@ static InterpretResult run(void)
 				ObjString * name = READ_STRING();
 				if (tableSet(&vm.globals, name, peek(0)))
 				{
+					tableDelete(&vm.globals, name);
 					runtimeError("Undefined variable '%s'.", name->aChars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
