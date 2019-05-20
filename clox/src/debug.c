@@ -71,6 +71,14 @@ static unsigned byteInstruction(const char * name, Chunk * chunk, unsigned offse
 	return offset + 2;
 }
 
+static unsigned jumpInstruction(const char * name, int sign, Chunk * chunk, int offset)
+{
+	uint16_t jump = (uint16_t)(chunk->aryB[offset + 1] << 8);
+	jump |= chunk->aryB[offset + 2];
+	printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
+	return offset + 3;
+}
+
 unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 {
 	ASSERT(offset < ARY_LEN(chunk->aryB));
@@ -135,6 +143,12 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return simpleInstruction("OP_NOT", offset);
 		case OP_PRINT:
 			return simpleInstruction("OP_PRINT", offset);
+		case OP_JUMP:
+			return jumpInstruction("OP_JUMP", 1, chunk, offset);
+		case OP_JUMP_IF_FALSE:
+			return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
+		case OP_LOOP:
+			return jumpInstruction("OP_LOOP", -1, chunk, offset);
 		case OP_RETURN:
 			return simpleInstruction("OP_RETURN", offset);
 		default:

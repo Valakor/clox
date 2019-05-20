@@ -51,7 +51,9 @@ void * xrealloc(void * previous, size_t oldSize, size_t newSize)
 	s_cBAlloc += dCb;
 
 	ASSERTMSG(s_cBAlloc >= 0, "Allocated bytes went negative!");
-#endif // DEBUG_ALLOC
+#else // !DEBUG_ALLOC
+	UNUSED(oldSize);
+#endif // !DEBUG_ALLOC
 
 	if (newSize == 0)
 	{

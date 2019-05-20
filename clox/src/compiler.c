@@ -10,6 +10,7 @@
 #include "scanner.h"
 #include "debug.h"
 #include "object.h"
+#include "array.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,7 +88,10 @@ static void statement(void);
 static void declaration(void);
 static void varDeclaration(void);
 static void printStatement(void);
+static void whileStatement(void);
 static void expressionStatement(void);
+static void forStatement(void);
+static void ifStatement(void);
 static void parsePrecedence(Precedence precendece);
 static uint32_t identifierConstant(Token * name);
 static bool resolveLocal(Compiler * compiler, Token * name, uint32_t * localIndex);
@@ -237,6 +241,28 @@ static void emitBytes(uint8_t byte1, uint8_t byte2)
 	emitByte(byte2);
 }
 
+static void emitLoop(uint32_t loopStart)
+{
+	emitByte(OP_LOOP);
+
+	uint32_t offset = ARY_LEN(currentChunk()->aryB) - loopStart + 2;
+	if (offset > UINT16_MAX)
+	{
+		error("Loop body too large.");
+	}
+
+	emitByte((offset >> 8) & 0xff);
+	emitByte(offset & 0xff);
+}
+
+static uint32_t emitJump(uint8_t instruction)
+{
+	emitByte(instruction);
+	emitByte(0xff);
+	emitByte(0xff);
+	return ARY_LEN(currentChunk()->aryB) - 2;
+}
+
 static void emitReturn(void)
 {
 	emitByte(OP_RETURN);
@@ -287,6 +313,21 @@ static void emitConstant(Value value)
 {
 	uint32_t constant = makeConstant(value);
 	emitConstantHelper(constant, OP_CONSTANT, OP_CONSTANT_LONG);
+}
+
+static void patchJump(uint32_t offset)
+{
+	// -2 to adjust for the bytecode for the jump offset itself
+
+	uint32_t jump = ARY_LEN(currentChunk()->aryB) - offset - 2;
+
+	if (jump > UINT16_MAX)
+	{
+		error("Too much code to jump over.");
+	}
+
+	currentChunk()->aryB[offset] = (jump >> 8) & 0xff;
+	currentChunk()->aryB[offset + 1] = jump & 0xff;
 }
 
 static void initCompiler(Compiler * compiler)
@@ -415,6 +456,34 @@ static void string(bool canAssign)
 	emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
+static void and_(bool canAssign)
+{
+	UNUSED(canAssign);
+
+	uint32_t endJump = emitJump(OP_JUMP_IF_FALSE);
+
+	emitByte(OP_POP);
+	parsePrecedence(PREC_AND);
+
+	patchJump(endJump);
+}
+
+static void or_(bool canAssign)
+{
+	// TODO (matthewp) Not as efficient as just having an OP_JUMP_IF_TRUE
+
+	UNUSED(canAssign);
+
+	uint32_t elseJump = emitJump(OP_JUMP_IF_FALSE);
+	uint32_t endJump = emitJump(OP_JUMP);
+
+	patchJump(elseJump);
+	emitByte(OP_POP);
+
+	parsePrecedence(PREC_OR);
+	patchJump(endJump);
+}
+
 static void namedVariable(Token name, bool canAssign)
 {
 	uint8_t getOp, setOp;
@@ -503,7 +572,7 @@ static const ParseRule rules[] =
 	{ variable, NULL,    PREC_NONE },       // TOKEN_IDENTIFIER
 	{ string,   NULL,    PREC_NONE },       // TOKEN_STRING
 	{ number,   NULL,    PREC_NONE },       // TOKEN_NUMBER
-	{ NULL,     NULL,    PREC_AND },        // TOKEN_AND
+	{ NULL,     and_,    PREC_AND },        // TOKEN_AND
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_CLASS
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_ELSE
 	{ literal,  NULL,    PREC_NONE },       // TOKEN_FALSE
@@ -511,7 +580,7 @@ static const ParseRule rules[] =
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_FUN
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_IF
 	{ literal,  NULL,    PREC_NONE },       // TOKEN_NIL
-	{ NULL,     NULL,    PREC_OR },         // TOKEN_OR
+	{ NULL,     or_,     PREC_OR },         // TOKEN_OR
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_PRINT
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_RETURN
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_SUPER
@@ -724,6 +793,18 @@ static void statement(void)
 	{
 		printStatement();
 	}
+	else if (match(TOKEN_FOR))
+	{
+		forStatement();
+	}
+	else if (match(TOKEN_IF))
+	{
+		ifStatement();
+	}
+	else if (match(TOKEN_WHILE))
+	{
+		whileStatement();
+	}
 	else if (match(TOKEN_LEFT_BRACE))
 	{
 		beginScope();
@@ -743,9 +824,122 @@ static void printStatement(void)
 	emitByte(OP_PRINT);
 }
 
+static void whileStatement(void)
+{
+	// TODO (matthewp) Add support for 'continue' statement
+
+	uint32_t loopStart = ARY_LEN(currentChunk()->aryB);
+
+	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+	expression();
+	consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+	uint32_t exitJump = emitJump(OP_JUMP_IF_FALSE);
+
+	emitByte(OP_POP);
+	statement();
+
+	emitLoop(loopStart);
+
+	patchJump(exitJump);
+	emitByte(OP_POP);
+}
+
 static void expressionStatement(void)
 {
 	expression();
 	consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
 	emitByte(OP_POP);
+}
+
+static void forStatement(void)
+{
+	// TODO (matthewp) Add support for 'continue' statement
+
+	beginScope();
+
+	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+
+	if (match(TOKEN_VAR))
+	{
+		varDeclaration();
+	}
+	else if (match(TOKEN_SEMICOLON))
+	{
+		// No initializer
+	}
+	else
+	{
+		expressionStatement();
+	}
+
+	uint32_t loopStart = ARY_LEN(currentChunk()->aryB);
+
+	bool hasJump = false;
+	uint32_t exitJump = 0;
+
+	if (!match(TOKEN_SEMICOLON))
+	{
+		expression();
+		consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+
+		// Jump out of the loop if the condition is false
+
+		exitJump = emitJump(OP_JUMP_IF_FALSE);
+		emitByte(OP_POP); // Condition
+		hasJump = true;
+	}
+
+	if (!match(TOKEN_RIGHT_PAREN))
+	{
+		// TODO (matthewp) This is pretty weird an adds additional jumps
+
+		uint32_t bodyJump = emitJump(OP_JUMP);
+
+		uint32_t incrementStart = ARY_LEN(currentChunk()->aryB);
+		expression();
+		emitByte(OP_POP);
+		consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+
+		emitLoop(loopStart);
+		loopStart = incrementStart;
+		patchJump(bodyJump);
+	}
+
+	statement();
+
+	emitLoop(loopStart);
+
+	if (hasJump)
+	{
+		patchJump(exitJump);
+		emitByte(OP_POP); // Condition
+	}
+
+	endScope();
+}
+
+static void ifStatement(void)
+{
+	// TODO (matthewp) Support 'switch' statements
+
+	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+	expression();
+	consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+	uint32_t thenJump = emitJump(OP_JUMP_IF_FALSE);
+	emitByte(OP_POP);
+	statement();
+
+	uint32_t elseJump = emitJump(OP_JUMP);
+
+	patchJump(thenJump);
+	emitByte(OP_POP);
+
+	if (match(TOKEN_ELSE))
+	{
+		statement();
+	}
+
+	patchJump(elseJump);
 }
