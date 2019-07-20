@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include "vm.h"
 
@@ -37,17 +38,25 @@ static void repl()
 	}
 }
 
-static char * readFile(const char * path)
+static char * readFile(const char * path, size_t * sz)
 {
 	FILE * file = fopen(path, "rb");
 	if (!file)
 	{
-		fprintf(stderr, "Could not open file '%s'\n", path);
+		perror("Could not open file");
 		exit(74);
 	}
 
 	fseek(file, 0L, SEEK_END);
-	size_t length = ftell(file);
+	long length = ftell(file);
+
+	if (length == EOF)
+	{
+		perror("Could not read file");
+		fclose(file);
+		exit(74);
+	}
+
 	rewind(file);
 
 	// NOTE (matthewp) Not using xmalloc here because we don't want to use our internal allocator
@@ -55,7 +64,9 @@ static char * readFile(const char * path)
 	char * buffer = (char *)malloc(length + 1);
 	if (!buffer)
 	{
-		fprintf(stderr, "Not enough memory to read file '%s'\n", path);
+		errno = ENOMEM;
+		perror("Could not read file");
+		fclose(file);
 		exit(74);
 	}
 
@@ -63,25 +74,45 @@ static char * readFile(const char * path)
 
 	if (read < length)
 	{
+		fclose(file);
 		free(buffer);
-		fprintf(stderr, "Could not read file '%s'\n", path);
+		perror("Could not read file");
 		exit(74);
 	}
 
 	buffer[read] = '\0';
 
 	fclose(file);
+	*sz = length;
+
 	return buffer;
 }
 
 static void runFile(const char * path)
 {
-	char * source = readFile(path);
-	InterpretResult result = interpret(source);
+	size_t sz;
+	char * source = readFile(path, &sz);
+	const char * interp = source;
+
+	// Skip UTF8-BOM (if present)
+
+	if (sz >= 3)
+	{
+		if (memcmp(source, "\xEF\xBB\xBF", 3) == 0)
+		{
+			interp += 3;
+		}
+	}
+
+	InterpretResult result = interpret(interp);
 	free(source);
 
-	if (result == INTERPRET_COMPILE_ERROR) exit(65);
-	if (result == INTERPRET_RUNTIME_ERROR) exit(70);
+	switch (result)
+	{
+	case INTERPRET_COMPILE_ERROR: exit(65);
+	case INTERPRET_RUNTIME_ERROR: exit(70);
+	default: break;
+	}
 }
 
 int main(int argc, const char * argv[])
