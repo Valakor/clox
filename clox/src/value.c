@@ -16,10 +16,13 @@
 
 bool valuesEqual(Value a, Value b)
 {
-	if (a.type != b.type)
+	ValueType typeA = VAL_TYPE(a);
+	ValueType typeB = VAL_TYPE(b);
+
+	if (typeA != typeB)
 		return false;
 
-	switch (a.type)
+	switch (typeA)
 	{
 		case VAL_BOOL:		return AS_BOOL(a) == AS_BOOL(b);
 		case VAL_NIL:		return true;
@@ -38,7 +41,7 @@ bool valuesEqual(Value a, Value b)
 
 void printValue(Value value)
 {
-	switch (value.type)
+	switch (VAL_TYPE(value))
 	{
 		case VAL_BOOL:		printf(AS_BOOL(value) ? "true" : "false"); break;
 		case VAL_NIL:		printf("nil"); break;
