@@ -25,7 +25,7 @@ typedef struct sObjString ObjString;
 
 #ifndef USE_SMALL_VALUE
 #	define USE_SMALL_VALUE 0
-#endif USE_SMALL_VALUE
+#endif // USE_SMALL_VALUE
 
 #if USE_SMALL_VALUE
 

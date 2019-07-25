@@ -72,7 +72,7 @@ static char * readFile(const char * path, size_t * sz)
 
 	size_t read = fread(buffer, sizeof(char), length, file);
 
-	if (read < length)
+	if (read < (size_t)length)
 	{
 		fclose(file);
 		free(buffer);
