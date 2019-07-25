@@ -161,7 +161,7 @@ static bool call(ObjFunction * function, int argCount)
 {
 	if (argCount != function->arity)
 	{
-		runtimeError("Expected %d arguments but got %d.", function->arity,argCount);
+		runtimeError("Expected %d arguments but got %d.", function->arity, argCount);
 		return false;
 	}
 
@@ -191,7 +191,7 @@ static bool callValue(Value callee, int argCount)
 			case OBJ_NATIVE:
 			{
 				// BB (matthewp) Allow reporting errors from native functions
-				
+
 				NativeFn native = AS_NATIVE(callee);
 				Value result = native(argCount, vm.stackTop - argCount);
 				vm.stackTop -= argCount + 1;
@@ -212,21 +212,26 @@ static bool callValue(Value callee, int argCount)
 
 static InterpretResult run(void)
 {
+	// NOTE (matthewp) frame->ip MUST be restored whenever leaving this function in case outside code wants to
+	//  access the frame's current instruction pointer. The benefits here (>10% performance in simple tests) seem
+	//  worth the extra complexity
+
 	CallFrame * frame = &vm.frames[vm.frameCount - 1];
+	register uint8_t * ip = frame->ip;
 
 	// BB (matthewp) Avoid extra push-pop operations by modifying the top of the stack in-place
 	//  Example: In unary negation, instead of: push(negate(pop())), do negate(peek())
-	// BB (matthewp) Put program counter (frame->ip) in a register variable on the stack
-	//  to improve perf. Would complicate frame-changing code (need to update ip as well).
 
-#define READ_BYTE() (*frame->ip++)
-#define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
+#define READ_BYTE() (*ip++)
+#define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
+#define READ_U24() (ip += 3, (uint32_t)((ip[-3] << 16) | (ip[-2] << 8) | ip[-1]))
 #define READ_CONSTANT() (frame->function->chunk.aryValConstants[READ_BYTE()])
-#define READ_CONSTANT_LONG() (frame->function->chunk.aryValConstants[((READ_BYTE() << 16) | (READ_BYTE() << 8) | (READ_BYTE()))])
+#define READ_CONSTANT_LONG() (frame->function->chunk.aryValConstants[READ_U24()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
 	do { \
 		if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
+			frame->ip = ip; \
 			runtimeError("Operands must be numbers."); \
 			return INTERPRET_RUNTIME_ERROR; \
 		} \
@@ -246,7 +251,7 @@ static InterpretResult run(void)
 			printf(" ]");
 		}
 		printf("\n");
-		disassembleInstruction(&frame->function->chunk, (unsigned)(frame->ip - frame->function->chunk.aryB));
+		disassembleInstruction(&frame->function->chunk, (unsigned)(ip - frame->function->chunk.aryB));
 #endif
 		uint8_t instruction;
 		switch (instruction = READ_BYTE())
@@ -306,6 +311,7 @@ static InterpretResult run(void)
 				Value value;
 				if (!tableGet(&vm.globals, name, &value))
 				{
+					frame->ip = ip;
 					runtimeError("Undefined variable '%s'.", name->aChars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
@@ -329,6 +335,7 @@ static InterpretResult run(void)
 				if (tableSet(&vm.globals, name, peek(0)))
 				{
 					tableDelete(&vm.globals, name);
+					frame->ip = ip;
 					runtimeError("Undefined variable '%s'.", name->aChars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
@@ -349,6 +356,7 @@ static InterpretResult run(void)
 			case OP_NEGATE:
 				if (!IS_NUMBER(peek(0)))
 				{
+					frame->ip = ip;
 					runtimeError("Operand must be a number.");
 					return INTERPRET_RUNTIME_ERROR;
 				}
@@ -370,6 +378,7 @@ static InterpretResult run(void)
 				}
 				else
 				{
+					frame->ip = ip;
 					runtimeError("Operands must be two numbers or two strings");
 					return INTERPRET_RUNTIME_ERROR;
 				}
@@ -391,31 +400,34 @@ static InterpretResult run(void)
 			case OP_JUMP:
 			{
 				uint16_t offset = READ_SHORT();
-				frame->ip += offset;
+				ip += offset;
 				break;
 			}
 
 			case OP_JUMP_IF_FALSE:
 			{
 				uint16_t offset = READ_SHORT();
-				if (isFalsey(peek(0))) frame->ip += offset;
+				if (isFalsey(peek(0))) ip += offset;
 				break;
 			}
 
 			case OP_LOOP:
 			{
 				uint16_t offset = READ_SHORT();
-				frame->ip -= offset;
+				ip -= offset;
 				break;
 			}
 
 			case OP_CALL:
 			{
 				int argCount = READ_BYTE();
+				frame->ip = ip;
+
 				if (!callValue(peek(argCount), argCount))
 					return INTERPRET_RUNTIME_ERROR;
 
 				frame = &vm.frames[vm.frameCount - 1];
+				ip = frame->ip;
 				break;
 			}
 
@@ -430,6 +442,7 @@ static InterpretResult run(void)
 				push(result);
 
 				frame = &vm.frames[vm.frameCount - 1];
+				ip = frame->ip;
 				break;
 			}
 		}
