@@ -10,6 +10,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
+#include <limits.h>
 #include "object.h"
 
 
@@ -39,13 +41,28 @@ bool valuesEqual(Value a, Value b)
 	return false;
 }
 
+static inline void printNumber(double v)
+{
+	double i;
+	double f = modf(v, &i);
+
+	if (f == 0.0 && i >= LLONG_MIN && i <= LLONG_MAX)
+	{
+		printf("%lld", (long long)i);
+	}
+	else
+	{
+		printf("%f", v);
+	}
+}
+
 void printValue(Value value)
 {
 	switch (VAL_TYPE(value))
 	{
 		case VAL_BOOL:		printf(AS_BOOL(value) ? "true" : "false"); break;
 		case VAL_NIL:		printf("nil"); break;
-		case VAL_NUMBER:	printf("%g", AS_NUMBER(value)); break;
+		case VAL_NUMBER:	printNumber(AS_NUMBER(value)); break;
 		case VAL_OBJ:		printObject(value); break;
 	}
 }
