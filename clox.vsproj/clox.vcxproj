@@ -53,7 +53,7 @@
       <PreprocessorDefinitions>_DEBUG;DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <CompileAs>CompileAsC</CompileAs>
       <AdditionalOptions>/wd4200 %(AdditionalOptions)</AdditionalOptions>
-      <DisableSpecificWarnings>4204</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4204; 4709</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalDependencies>DbgHelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -75,7 +75,7 @@
       <StringPooling>true</StringPooling>
       <CompileAs>CompileAsC</CompileAs>
       <AdditionalOptions>/wd4200 %(AdditionalOptions)</AdditionalOptions>
-      <DisableSpecificWarnings>4204</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4204; 4709</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
