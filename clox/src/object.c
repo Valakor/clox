@@ -56,6 +56,23 @@ static uint32_t hashString(const char * key, int length)
 	return hash;
 }
 
+ObjFunction * newFunction(void)
+{
+	ObjFunction * function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
+	function->arity = 0;
+	function->name = NULL;
+	initChunk(&function->chunk);
+
+	return function;
+}
+
+ObjNative * newNative(NativeFn function)
+{
+	ObjNative * native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE);
+	native->function = function;
+	return native;
+}
+
 ObjString * concatStrings(const ObjString * pStrA, const ObjString * pStrB)
 {
 	int length = pStrA->length + pStrB->length;
@@ -108,20 +125,25 @@ ObjString * takeString(const char * chars, int length)
 	return allocateString(chars, length, hash);
 }
 
-void freeString(ObjString ** ppStr)
-{
-	ObjString * pStr = *ppStr;
-
-	CARY_FREE(char, (void *)pStr->aChars, pStr->length + 1);
-	FREE(ObjString, pStr);
-
-	*ppStr = NULL;
-}
-
 void printObject(Value value)
 {
 	switch (OBJ_TYPE(value))
 	{
+		case OBJ_FUNCTION:
+			if (AS_FUNCTION(value)->name == NULL)
+			{
+				printf("<script>");
+			}
+			else
+			{
+				printf("<fn %s>", AS_FUNCTION(value)->name->aChars);
+			}
+			break;
+
+		case OBJ_NATIVE:
+			printf("<native fn>");
+			break;
+
 		case OBJ_STRING:
 			printf("%s", AS_CSTRING(value));
 			break;

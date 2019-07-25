@@ -42,7 +42,9 @@ CASSERT(sizeof(Value) == sizeof(void *));
 #define _VAL_NIL			0x7ffd000000000000ull
 #define _VAL_OBJ			0x7fff000000000000ull
 
-inline uint64_t valueCastToUn(Value value)
+#define _VAL_MASK			0x7fff000000000000ull
+
+inline static uint64_t valueCastToUn(Value value)
 {
 	union
 	{
@@ -55,7 +57,7 @@ inline uint64_t valueCastToUn(Value value)
 	return u.d;
 }
 
-inline Value valueCastToValue(uint64_t d)
+inline static Value valueCastToValue(uint64_t d)
 {
 	union
 	{
@@ -68,7 +70,7 @@ inline Value valueCastToValue(uint64_t d)
 	return u.value;
 }
 
-inline ValueType valueType(Value value)
+inline static ValueType valueType(Value value)
 {
 	uint64_t d = valueCastToUn(value);
 
@@ -93,10 +95,10 @@ inline ValueType valueType(Value value)
 
 #define VAL_TYPE(value)		(valueType(value))
 
-#define IS_BOOL(value)		(valueCastToUn(value) == _VAL_BOOL)
+#define IS_BOOL(value)		((valueCastToUn(value) & ~0x1ull) == _VAL_BOOL)
 #define IS_NIL(value)		(valueCastToUn(value) == _VAL_NIL)
 #define IS_NUMBER(value)	((valueCastToUn(value) & _VALUE_TYPE_MASK) != _VALUE_TYPE_MASK)
-#define IS_OBJ(value)		(valueCastToUn(value) == _VAL_OBJ)
+#define IS_OBJ(value)		((valueCastToUn(value) & ~_VALUE_PTR_MASK) == _VAL_OBJ)
 
 #define AS_BOOL(value)		((bool)(valueCastToUn(value) & 0x1))
 #define AS_NUMBER(value)	((value))

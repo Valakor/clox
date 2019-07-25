@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 
+#include "array.h"
 #include "vm.h"
 #include "object.h"
 
@@ -70,10 +71,25 @@ static void freeObject(Obj * object)
 {
 	switch (object->type)
 	{
+		case OBJ_FUNCTION:
+		{
+			ObjFunction * function = (ObjFunction *)object;
+			freeChunk(&function->chunk);
+			FREE(ObjFunction, function);
+			break;
+		}
+
+		case OBJ_NATIVE:
+		{
+			FREE(ObjNative, object);
+			break;
+		}
+
 		case OBJ_STRING:
 		{
 			ObjString * string = (ObjString*)object;
-			freeString(&string);
+			CARY_FREE(char, (void *)string->aChars, string->length + 1);
+			FREE(ObjString, string);
 			break;
 		}
 	}
