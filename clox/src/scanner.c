@@ -12,7 +12,7 @@
 
 
 
-typedef struct
+typedef struct sScanner
 {
 	const char * start;
 	const char * current;
@@ -20,6 +20,8 @@ typedef struct
 } Scanner;
 
 Scanner scanner;
+
+
 
 void initScanner(const char * source)
 {
