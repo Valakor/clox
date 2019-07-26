@@ -837,9 +837,9 @@ static void function(FunctionType type)
 
 			current->function->arity++;
 
-			if (current->function->arity > 8)
+			if (current->function->arity > 255)
 			{
-				error("Cannot have more than 8 parameters.");
+				error("Cannot have more than 255 parameters.");
 			}
 		}
 		while (match(TOKEN_COMMA));
