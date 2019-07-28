@@ -8,10 +8,11 @@
 
 #pragma once
 
-#include "common.h"
 #include "value.h"
 
-typedef enum
+
+
+typedef enum eOpCode
 {
 	OP_CONSTANT,
 	OP_CONSTANT_LONG,
@@ -44,22 +45,27 @@ typedef enum
 	OP_MAX,
 	OP_MIN = 0,
 } OpCode;
-CASSERT(OP_MAX <= UINT8_MAX + 1);
 
-typedef struct
+static_assert(OP_MAX <= UINT8_MAX + 1, "OpCode Max value is too large");
+
+
+
+typedef struct sInstructionRange
 {
 	unsigned instructionMic;
 	unsigned instructionMac;
 	unsigned line;
 } InstructionRange; // tag = instrange
 
-typedef struct
+typedef struct sChunk
 {
 	uint8_t * aryB;
 	Value * aryValConstants;
 
 	InstructionRange * aryInstrange;
 } Chunk; // tag = chunk
+
+
 
 void initChunk(Chunk * chunk);
 void freeChunk(Chunk * chunk);

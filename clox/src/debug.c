@@ -6,6 +6,7 @@
 //  Copyright © 2018 Matthew Pohlmann. All rights reserved.
 //
 
+#include "common.h"
 #include "debug.h"
 
 #include <stdio.h>

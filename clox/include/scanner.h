@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "common.h"
-
 
 
 typedef enum eTokenType
@@ -39,6 +37,8 @@ typedef enum eTokenType
 	TOKEN_EOF
 } TokenType;
 
+
+
 typedef struct sToken
 {
 	TokenType type;
@@ -47,5 +47,14 @@ typedef struct sToken
 	int line;
 } Token;
 
-void initScanner(const char* source);
-Token scanToken(void);
+typedef struct sScanner
+{
+	const char * start;
+	const char * current;
+	int line;
+} Scanner;
+
+
+
+void initScanner(Scanner * scanner, const char* source);
+Token scanToken(Scanner * scanner);

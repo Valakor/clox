@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "common.h"
-#include "chunk.h"
 #include "object.h"
 
 

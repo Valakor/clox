@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "value.h"
+#include "object.h"
 
 
 

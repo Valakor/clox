@@ -14,20 +14,28 @@
 
 
 
-typedef enum
+typedef enum eObjType
 {
+	OBJ_STRING,
 	OBJ_FUNCTION,
 	OBJ_NATIVE,
-	OBJ_STRING,
 } ObjType;
 
-struct sObj
+typedef struct sObj
 {
 	ObjType type;
 	struct sObj * next;
-};
+} Obj;
 
-typedef struct
+typedef struct sObjString
+{
+	Obj obj;
+	uint32_t hash;
+	int length;
+	const char * aChars;
+} ObjString;
+
+typedef struct sObjFunction
 {
 	Obj obj;
 	int arity;
@@ -37,19 +45,13 @@ typedef struct
 
 typedef Value (*NativeFn)(int argCount, Value * args);
 
-typedef struct
+typedef struct sObjNative
 {
 	Obj obj;
 	NativeFn function;
 } ObjNative;
 
-struct sObjString
-{
-	Obj obj;
-	uint32_t hash;
-	int length;
-	const char * aChars;
-};
+
 
 extern ObjFunction * newFunction(void);
 extern ObjNative * newNative(NativeFn function);
