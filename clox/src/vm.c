@@ -97,6 +97,16 @@ InterpretResult interpret(const char * source)
 	if (function == NULL)
 		return INTERPRET_COMPILE_ERROR;
 
+	return interpretFunction(function);
+}
+
+InterpretResult interpretFunction(ObjFunction * function)
+{
+	// A null name indicates the root "function" (the script itself)
+
+	ASSERT(function);
+	ASSERT(function->name == NULL);
+
 	push(OBJ_VAL(function));
 	callValue(OBJ_VAL(function), 0);
 

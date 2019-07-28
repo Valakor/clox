@@ -19,21 +19,21 @@
 #define FRAMES_MAX 64
 #define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
 
-typedef enum
+typedef enum eInterpretResult
 {
 	INTERPRET_OK,
 	INTERPRET_COMPILE_ERROR,
 	INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
-typedef struct
+typedef struct sCallFrame
 {
 	ObjFunction * function;
 	uint8_t * ip;
 	Value * slots;
 } CallFrame;
 
-typedef struct
+typedef struct sVM
 {
 	CallFrame frames[FRAMES_MAX];
 	int frameCount;
@@ -61,6 +61,7 @@ void initVM(void);
 void freeVM(void);
 
 InterpretResult interpret(const char * source);
+InterpretResult interpretFunction(ObjFunction * function);
 
 void push(Value value);
 Value pop(void);
