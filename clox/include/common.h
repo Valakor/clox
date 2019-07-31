@@ -46,19 +46,23 @@
 
 	#define ASSERT(f) ASSERT_MACRO(f, #f)
 	#define ASSERTMSG(f, format, ...) ASSERT_MACRO(f, format, ##__VA_ARGS__)
-
-	#define DEBUG_TRACE_EXECUTION 1
-	#define DEBUG_PRINT_CODE 1
-	#define DEBUG_ALLOC 1
 #else
 	#define DEBUG_BREAK() (void)0
 
 	#define ASSERT(...) (void)0
 	#define ASSERTMSG(...) (void)0
+#endif
 
-	#define DEBUG_TRACE_EXECUTION 0
-	#define DEBUG_PRINT_CODE 0
-	#define DEBUG_ALLOC 0
+#ifndef DEBUG_TRACE_EXECUTION
+#define DEBUG_TRACE_EXECUTION 0
+#endif
+
+#ifndef DEBUG_PRINT_CODE
+#define DEBUG_PRINT_CODE 0
+#endif
+
+#ifndef DEBUG_ALLOC
+#define DEBUG_ALLOC (DEBUG || _DEBUG)
 #endif
 
 #define CASSERT(f) static_assert(f, #f)

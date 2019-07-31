@@ -26,7 +26,8 @@ static void resetStack(void);
 static bool callValue(Value callee, int argCount);
 static void defineNative(const char * name, NativeFn function);
 
-static Value clockNative(int argCount, Value * args);
+static bool clockNative(int argCount, Value * args);
+static bool errNative(int argCount, Value * args);
 
 void initVM()
 {
@@ -36,6 +37,7 @@ void initVM()
 	initTable(&vm.strings);
 
 	defineNative("clock", clockNative);
+	defineNative("error", errNative);
 }
 
 void freeVM()
@@ -119,20 +121,36 @@ static void resetStack(void)
 	vm.frameCount = 0;
 }
 
-static Value clockNative(int argCount, Value * args)
+static bool clockNative(int argCount, Value * args)
 {
 	UNUSED(argCount);
-	UNUSED(args);
+	args[-1] = NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+	return true;
+}
 
-	return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+static bool errNative(int argCount, Value * args)
+{
+	if (argCount > 0 && IS_STRING(args[0]))
+	{
+		args[-1] = args[0];
+	}
+	else
+	{
+		args[-1] = OBJ_VAL(copyString("Runtime Error", 13));
+	}
+
+	return false;
 }
 
 static void runtimeError(const char * format, ...)
 {
+	fputs("ERROR: ", stderr);
+
 	va_list args;
 	va_start(args, format);
 	vfprintf(stderr, format, args);
 	va_end(args);
+
 	fputs("\n", stderr);
 
 	for (int i = vm.frameCount - 1; i >= 0; i--)
@@ -200,14 +218,19 @@ static bool callValue(Value callee, int argCount)
 
 			case OBJ_NATIVE:
 			{
-				// BB (matthewp) Allow reporting errors from native functions
-
 				NativeFn native = AS_NATIVE(callee);
-				Value result = native(argCount, vm.stackTop - argCount);
-				vm.stackTop -= argCount + 1;
-				push(result);
 
-				return true;
+				if (native(argCount, vm.stackTop - argCount))
+				{
+					vm.stackTop -= argCount;
+					return true;
+				}
+				else
+				{
+					ASSERT(IS_STRING(vm.stackTop[-argCount - 1]));
+					runtimeError(AS_CSTRING(vm.stackTop[-argCount - 1]));
+					return false;
+				}
 			}
 
 			default:
