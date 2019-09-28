@@ -51,7 +51,7 @@ static void PrintStack()
 		// Allocate a buffer large enough to hold the symbol information on the stack and get 
 		// a pointer to the buffer. We also have to set the size of the symbol structure itself
 		// and the number of bytes reserved for the name.
-		char buffer[sizeof(SYMBOL_INFO) + 1024 * sizeof(TCHAR)];
+		char buffer[sizeof(SYMBOL_INFO) + 1024 * sizeof(TCHAR)] = { 0 };
 
 		PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
 		pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
@@ -62,7 +62,7 @@ static void PrintStack()
 		if (!SymFromAddr(process, (DWORD64)addrs[i], &displacement, pSymbol))
 			continue;
 
-		IMAGEHLP_MODULE64 module;
+		IMAGEHLP_MODULE64 module = { 0 };
 		module.SizeOfStruct = sizeof(IMAGEHLP_MODULE64);
 
 		SymGetModuleInfo64(process, (DWORD64)addrs[i], &module);

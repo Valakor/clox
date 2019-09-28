@@ -55,7 +55,14 @@ typedef struct sLocal
 {
 	Token name;
 	int depth;
+	bool isCaptured;
 } Local;
+
+typedef struct sUpvalue
+{
+	uint8_t index;
+	bool isLocal;
+} Upvalue;
 
 typedef enum eFunctionType
 {
@@ -77,6 +84,7 @@ typedef struct sCompiler
 	// TODO: Enhancement. Add concept of variables that don't allow re-assignment ('let'?)
 	Local locals[UINT8_COUNT];
 	int localCount;
+	Upvalue upvalues[UINT8_COUNT];
 	int scopeDepth;
 } Compiler;
 
@@ -111,6 +119,7 @@ static void ifStatement(void);
 static void parsePrecedence(Precedence precendece);
 static uint32_t identifierConstant(Token * name);
 static bool resolveLocal(Compiler * compiler, Token * name, uint32_t * localIndex);
+static bool resolveUpvalue(Compiler * compiler, Token * name, uint32_t * upvalueIndex);
 static void declareVariable(void);
 static uint8_t argumentList(void);
 static const ParseRule * getRule(TokenType type);
@@ -367,6 +376,7 @@ static void initCompiler(Compiler * compiler, Scanner * scanner, Parser * parser
 
 	Local * local = &current->locals[current->localCount++];
 	local->depth = 0;
+	local->isCaptured = false;
 	local->name.start = "";
 	local->name.length = 0;
 }
@@ -404,28 +414,39 @@ static void endScope(void)
 	while (current->localCount > 0 &&
 		   current->locals[current->localCount - 1].depth > current->scopeDepth)
 	{
+		if (current->locals[current->localCount - 1].isCaptured)
+		{
+			emitByte(OP_CLOSE_UPVALUE);
+		}
+		else
+		{
+			emitByte(OP_POP);
+		}
+
 		numLocals++;
 		current->localCount--;
 	}
 
-	if (numLocals == 0)
-		return;
+	// TODO: Get this working again
 
-	if (numLocals == 1)
-	{
-		emitByte(OP_POP);
-	}
-	else
-	{
-		// Assumption: Only 256 locals possible
-		// NOTE: POPN stores N - 2
+	//if (numLocals == 0)
+	//	return;
 
-		ASSERT(numLocals <= UINT8_COUNT);
+	//if (numLocals == 1)
+	//{
+	//	emitByte(OP_POP);
+	//}
+	//else
+	//{
+	//	// Assumption: Only 256 locals possible
+	//	// NOTE: POPN stores N - 2
 
-		uint8_t arg = (uint8_t)(numLocals - 2);
+	//	ASSERT(numLocals <= UINT8_COUNT);
 
-		emitBytes(OP_POPN, arg);
-	}
+	//	uint8_t arg = (uint8_t)(numLocals - 2);
+
+	//	emitBytes(OP_POPN, arg);
+	//}
 }
 
 static void binary(bool canAssign)
@@ -544,6 +565,13 @@ static void namedVariable(Token name, bool canAssign)
 		setOp = OP_SET_LOCAL;
 
 		ASSERT(arg < UINT8_COUNT);
+	}
+	else if (resolveUpvalue(current, &name, &arg))
+	{
+		// TODO: Support LONG variants?
+
+		getOp = OP_GET_UPVALUE;
+		setOp = OP_SET_UPVALUE;
 	}
 	else
 	{
@@ -704,6 +732,54 @@ static bool resolveLocal(Compiler * compiler, Token * name, uint32_t * localInde
 	return false;
 }
 
+static uint32_t addUpvalue(Compiler * compiler, uint8_t index, bool isLocal)
+{
+	uint32_t upvalueCount = compiler->function->upvalueCount;
+
+	for (uint32_t i = 0; i < upvalueCount; ++i)
+	{
+		Upvalue * upvalue = &compiler->upvalues[i];
+
+		if (upvalue->index == index && upvalue->isLocal == isLocal)
+			return i;
+	}
+
+	if (upvalueCount == UINT8_COUNT)
+	{
+		error("Too many closure variables in function.");
+		return 0;
+	}
+
+	compiler->upvalues[upvalueCount].isLocal = isLocal;
+	compiler->upvalues[upvalueCount].index = index;
+
+	return compiler->function->upvalueCount++;
+}
+
+static bool resolveUpvalue(Compiler * compiler, Token* name, uint32_t* upvalueIndex)
+{
+	if (compiler->enclosing == NULL) return false;
+
+	uint32_t localIndex;
+	if (resolveLocal(compiler->enclosing, name, &localIndex))
+	{
+		ASSERT(localIndex < UINT8_COUNT);
+
+		compiler->enclosing->locals[localIndex].isCaptured = true;
+		*upvalueIndex = addUpvalue(compiler, (uint8_t)localIndex, true);
+		return true;
+	}
+
+	uint32_t upvalueIndexEnclosing;
+	if (resolveUpvalue(compiler->enclosing, name, &upvalueIndexEnclosing))
+	{
+		*upvalueIndex = addUpvalue(compiler, (uint8_t)upvalueIndexEnclosing, false);
+		return true;
+	}
+
+	return false;
+}
+
 static void addLocal(Token name)
 {
 	if (current->localCount == UINT8_COUNT)
@@ -715,6 +791,7 @@ static void addLocal(Token name)
 	Local * local = &current->locals[current->localCount++];
 	local->name = name;
 	local->depth = -1;
+	local->isCaptured = false;
 }
 
 static void declareVariable(void)
@@ -860,10 +937,18 @@ static void function(FunctionType type)
 	consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
 	block();
 
-	// Create the function object
+	// Create the runtime closure object pointing to the compiled function
 
 	ObjFunction * function = endCompiler();
-	emitConstant(OBJ_VAL(function));
+
+	uint32_t constant = makeConstant(OBJ_VAL(function));
+	emitConstantHelper(constant, OP_CLOSURE, OP_CLOSURE_LONG);
+
+	for (int i = 0; i < function->upvalueCount; ++i)
+	{
+		emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+		emitByte(compiler.upvalues[i].index);
+	}
 }
 
 static void declaration(void)

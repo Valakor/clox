@@ -56,14 +56,40 @@ static uint32_t hashString(const char * key, int length)
 	return hash;
 }
 
+ObjUpvalue* newUpvalue(Value* slot)
+{
+	ObjUpvalue * upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
+	upvalue->location = slot;
+	upvalue->closed = NIL_VAL;
+	upvalue->next = NULL;
+	return upvalue;
+}
+
 ObjFunction * newFunction(void)
 {
 	ObjFunction * function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
 	function->arity = 0;
+	function->upvalueCount = 0;
 	function->name = NULL;
 	initChunk(&function->chunk);
 
 	return function;
+}
+
+ObjClosure * newClosure(ObjFunction * function)
+{
+	ObjUpvalue ** upvalues = CARY_ALLOCATE(ObjUpvalue *, function->upvalueCount);
+
+	for (int i = 0; i < function->upvalueCount; ++i)
+	{
+		upvalues[i] = NULL;
+	}
+
+	ObjClosure * closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
+	closure->function = function;
+	closure->upvalues = upvalues;
+	closure->upvalueCount = function->upvalueCount;
+	return closure;
 }
 
 ObjNative * newNative(NativeFn function)
@@ -129,6 +155,10 @@ void printObject(Value value)
 {
 	switch (OBJ_TYPE(value))
 	{
+		case OBJ_UPVALUE:
+			printf("upvalue");
+			break;
+
 		case OBJ_FUNCTION:
 			if (AS_FUNCTION(value)->name == NULL)
 			{
@@ -137,6 +167,17 @@ void printObject(Value value)
 			else
 			{
 				printf("<fn %s>", AS_FUNCTION(value)->name->aChars);
+			}
+			break;
+
+		case OBJ_CLOSURE:
+			if (AS_CLOSURE(value)->function->name == NULL)
+			{
+				printf("<script>");
+			}
+			else
+			{
+				printf("<fn %s>", AS_CLOSURE(value)->function->name->aChars);
 			}
 			break;
 

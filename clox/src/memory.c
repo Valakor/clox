@@ -71,11 +71,25 @@ static void freeObject(Obj * object)
 {
 	switch (object->type)
 	{
+		case OBJ_UPVALUE:
+		{
+			FREE(ObjUpvalue, object);
+			break;
+		}
+
 		case OBJ_FUNCTION:
 		{
 			ObjFunction * function = (ObjFunction *)object;
 			freeChunk(&function->chunk);
 			FREE(ObjFunction, function);
+			break;
+		}
+
+		case OBJ_CLOSURE:
+		{
+			ObjClosure * closure = (ObjClosure *)object;
+			CARY_FREE(ObjUpvalue *, closure->upvalues, closure->upvalueCount);
+			FREE(ObjClosure, closure);
 			break;
 		}
 

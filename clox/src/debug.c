@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 
+#include "object.h"
 #include "value.h"
 #include "array.h"
 
@@ -24,39 +25,74 @@ void disassembleChunk(Chunk * chunk, const char * name)
 	}
 }
 
-static unsigned constantInstruction(const char * name, Chunk * chunk, unsigned offset, bool isLong)
+static unsigned getConstant(Chunk * chunk, bool isLong, unsigned * offsetOut)
 {
 	unsigned constant;
 	unsigned constantBytes;
+
+	unsigned offset = *offsetOut;
 
 	if (isLong)
 	{
 		constantBytes = 3;
 
-		ASSERT(offset + 1 + constantBytes <= ARY_LEN(chunk->aryB));
+		ASSERT(offset + constantBytes <= ARY_LEN(chunk->aryB));
 
-		constant  = chunk->aryB[offset + 1];
-		constant  = constant << 8;
+		constant = chunk->aryB[offset];
+		constant = constant << 8;
+		constant |= chunk->aryB[offset + 1];
+		constant = constant << 8;
 		constant |= chunk->aryB[offset + 2];
-		constant  = constant << 8;
-		constant |= chunk->aryB[offset + 3];
 	}
 	else
 	{
 		constantBytes = 1;
 
-		ASSERT(offset + 1 + constantBytes <= ARY_LEN(chunk->aryB));
+		ASSERT(offset + constantBytes <= ARY_LEN(chunk->aryB));
 
-		constant = chunk->aryB[offset + 1];
+		constant = chunk->aryB[offset];
 	}
 
 	ASSERT(constant < ARY_LEN(chunk->aryValConstants));
+
+	*offsetOut += constantBytes;
+
+	return constant;
+}
+
+static unsigned constantInstruction(const char * name, Chunk * chunk, unsigned offset, bool isLong)
+{
+	offset += 1;
+
+	unsigned constant = getConstant(chunk, isLong, &offset);
 
 	printf("%-16s %4u '", name, constant);
 	printValue(chunk->aryValConstants[constant]);
 	printf("'\n");
 
-	return offset + 1 + constantBytes;
+	return offset;
+}
+
+static unsigned closureInstruction(const char * name, Chunk * chunk, unsigned offset, bool isLong)
+{
+	offset += 1;
+
+	unsigned constant = getConstant(chunk, isLong, &offset);
+
+	printf("%-16s %4u '", name, constant);
+	printValue(chunk->aryValConstants[constant]);
+	printf("'\n");
+
+	ObjFunction * function = AS_FUNCTION(chunk->aryValConstants[constant]);
+
+	for (int j = 0; j < function->upvalueCount; ++j)
+	{
+		int isLocal = chunk->aryB[offset++];
+		int index = chunk->aryB[offset++];
+		printf("%04d      |                     %s %d\n", offset - 2, isLocal ? "local" : "upvalue", index);
+	}
+
+	return offset;
 }
 
 static unsigned simpleInstruction(const char * name, unsigned offset)
@@ -124,6 +160,10 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset, false);
 		case OP_SET_GLOBAL:
 			return constantInstruction("OP_SET_GLOBAL", chunk, offset, false);
+		case OP_GET_UPVALUE:
+			return byteInstruction("OP_GET_UPVALUE", chunk, offset);
+		case OP_SET_UPVALUE:
+			return byteInstruction("OP_SET_UPVALUE", chunk, offset);
 		case OP_EQUAL:
 			return simpleInstruction("OP_EQUAL", offset);
 		case OP_GREATER:
@@ -152,6 +192,12 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return jumpInstruction("OP_LOOP", -1, chunk, offset);
 		case OP_CALL:
 			return byteInstruction("OP_CALL", chunk, offset);
+		case OP_CLOSURE:
+			return closureInstruction("OP_CLOSURE", chunk, offset, false);
+		case OP_CLOSURE_LONG:
+			return closureInstruction("OP_CLOSURE_LONG", chunk, offset, true);
+		case OP_CLOSE_UPVALUE:
+			return simpleInstruction("OP_CLOSE_UPVALUE", offset);
 		case OP_RETURN:
 			return simpleInstruction("OP_RETURN", offset);
 		default:
