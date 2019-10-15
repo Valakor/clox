@@ -316,13 +316,13 @@ static void emitConstantHelper(uint32_t constant, OpCode opShort, OpCode opLong)
 	{
 		// Use more optimal 1-byte constant op
 
-		emitBytes(opShort, (uint8_t)constant);
+		emitBytes((uint8_t)opShort, (uint8_t)constant);
 	}
 	else if (constant <= UINT24_MAX)
 	{
 		// Use 3-byte constant op
 
-		emitByte(opLong);
+		emitByte((uint8_t)opLong);
 
 		for (int i = 0; i < 3; i++)
 		{
@@ -1094,13 +1094,13 @@ static void forStatement(void)
 
 	consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
 
-	if (match(TOKEN_VAR))
-	{
-		varDeclaration();
-	}
-	else if (match(TOKEN_SEMICOLON))
+	if (match(TOKEN_SEMICOLON))
 	{
 		// No initializer
+	}
+	else if (match(TOKEN_VAR))
+	{
+		varDeclaration();
 	}
 	else
 	{
