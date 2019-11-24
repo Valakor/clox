@@ -38,7 +38,7 @@ typedef enum ePrecedence
 	PREC_TERM,			// + -
 	PREC_FACTOR,		// * /
 	PREC_UNARY,			// ! -
-	PREC_CALL,			// . () []
+	PREC_CALL,			// . ()
 	PREC_PRIMARY,
 } Precedence;
 
@@ -694,7 +694,6 @@ static void parsePrecedence(Precedence precedence)
 	if (canAssign && match(TOKEN_EQUAL))
 	{
 		error("Invalid assignment target.");
-		expression();
 	}
 }
 
