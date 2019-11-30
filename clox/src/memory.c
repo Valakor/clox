@@ -52,19 +52,24 @@ void * xrealloc(void * previous, size_t oldSize, size_t newSize)
 	s_cBAlloc += dCb;
 
 	ASSERTMSG(s_cBAlloc >= 0, "Allocated bytes went negative!");
-#else // !DEBUG_ALLOC
-	UNUSED(oldSize);
-#endif // !DEBUG_ALLOC
+#endif // DEBUG_ALLOC
 
-	if (newSize == 0)
+	if (newSize == 0 && oldSize == 0)
+	{
+		ASSERT(previous == NULL);
+		return NULL;
+	}
+	else if (newSize == 0)
 	{
 		xfree(previous);
 		return NULL;
 	}
-
-	void * p = realloc(previous, newSize);
-	ASSERTMSG(p != NULL, "Out of memory!");
-	return p;
+	else
+	{
+		void * p = realloc(previous, newSize);
+		ASSERTMSG(p != NULL, "Out of memory!");
+		return p;
+	}
 }
 
 static void freeObject(Obj * object)
