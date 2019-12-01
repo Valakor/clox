@@ -109,10 +109,10 @@ void * xrealloc(void * previous, size_t oldSize, size_t newSize)
 static void freeObject(Obj * object)
 {
 #if DEBUG_LOG_GC
-	printf("%p free type %d\n", (void*)object, object->type);
+	printf("%p free type %d\n", (void*)object, getObjType(object));
 #endif // DEBUG_LOG_GC
 
-	switch (object->type)
+	switch (getObjType(object))
 	{
 		case OBJ_UPVALUE:
 		{
@@ -182,7 +182,7 @@ static void blackenObject(Obj* obj)
 	printf("\n");
 #endif // DEBUG_LOG_GC
 
-	switch (obj->type)
+	switch (getObjType(obj))
 	{
 	case OBJ_CLOSURE:
 	{
@@ -231,20 +231,20 @@ static void sweep(void)
 
 	while (obj != NULL)
 	{
-		if (obj->isMarked)
+		if (getIsMarked(obj))
 		{
-			obj->isMarked = false;
+			setIsMarked(obj, false);
 			previous = obj;
-			obj = obj->next;
+			obj = getObjNext(obj);
 		}
 		else
 		{
 			Obj* unreached = obj;
-			obj = obj->next;
+			obj = getObjNext(obj);
 
 			if (previous != NULL)
 			{
-				previous->next = obj;
+				setObjNext(previous, obj);
 			}
 			else
 			{
@@ -269,7 +269,7 @@ void markObject(Obj* obj)
 	if (obj == NULL)
 		return;
 
-	if (obj->isMarked)
+	if (getIsMarked(obj))
 		return;
 
 #if DEBUG_LOG_GC
@@ -278,7 +278,7 @@ void markObject(Obj* obj)
 	printf("\n");
 #endif // DEBUG_LOG_GC
 
-	obj->isMarked = true;
+	setIsMarked(obj, true);
 
 	if (vm.grayCapacity < vm.grayCount + 1)
 	{
@@ -327,7 +327,7 @@ void freeObjects(void)
 	Obj * object = vm.objects;
 	while (object != NULL)
 	{
-		Obj * next = object->next;
+		Obj * next = getObjNext(object);
 		freeObject(object);
 		object = next;
 	}

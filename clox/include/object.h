@@ -25,10 +25,14 @@ typedef enum ObjType
 
 typedef struct Obj
 {
-	ObjType type;
-	bool isMarked;
-	struct Obj * next;
+	// ObjType type		: 8;
+	// bool isMarked	: 1;
+	// Obj* next		: 55;
+
+	uint64_t n;
 } Obj;
+
+static_assert(sizeof(Obj) == 8, "");
 
 typedef struct ObjString
 {
@@ -73,6 +77,43 @@ typedef struct ObjNative
 
 
 
+static inline ObjType getObjType(Obj* obj)
+{
+	return (ObjType)(obj->n & 0xffull);
+}
+
+static inline void setObjType(Obj* obj, ObjType type)
+{
+	obj->n = (obj->n & ~0xffull) | (uint64_t)type;
+}
+
+static inline bool getIsMarked(Obj* obj)
+{
+	return (obj->n & 0x100ull) != 0;
+}
+
+static inline void setIsMarked(Obj* obj, bool isMarked)
+{
+	obj->n = (obj->n & ~0x100ull) | ((isMarked) ? 0x100ull : 0);
+}
+
+static inline Obj* getObjNext(Obj* obj)
+{
+	return (Obj*)(obj->n >> 9);
+}
+
+static inline void setObjNext(Obj* obj, Obj* next)
+{
+	obj->n = (obj->n & 0x1ffull) | ((uint64_t)next << 9);
+}
+
+static inline void initObj(Obj* obj, ObjType type, Obj* next)
+{
+	obj->n = ((uint64_t)next << 9) | (uint64_t)type;
+}
+
+
+
 extern ObjUpvalue * newUpvalue(Value * slot);
 extern ObjFunction * newFunction(void);
 extern ObjClosure * newClosure(ObjFunction * function);
@@ -86,10 +127,10 @@ extern void printObject(Value value);
 
 static inline bool isObjType(Value value, ObjType type)
 {
-	return IS_OBJ(value) && AS_OBJ(value)->type == type;
+	return IS_OBJ(value) && getObjType(AS_OBJ(value)) == type;
 }
 
-#define OBJ_TYPE(value)		(AS_OBJ(value)->type)
+#define OBJ_TYPE(value)		(getObjType(AS_OBJ(value)))
 
 #define IS_UPVALUE(value)	isObjType(value, OBJ_UPVALUE)
 #define IS_FUNCTION(value)	isObjType(value, OBJ_FUNCTION)

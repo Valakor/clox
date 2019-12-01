@@ -21,10 +21,7 @@
 static Obj * allocateObject(size_t size, ObjType type)
 {
 	Obj * object = (Obj*)xrealloc(NULL, 0, size);
-	object->type = type;
-	object->isMarked = false;
-
-	object->next = vm.objects;
+	initObj(object, type, vm.objects);
 	vm.objects = object;
 
 #if DEBUG_LOG_GC
