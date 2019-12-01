@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include "array.h"
+#include "vm.h"
 
 
 
@@ -102,7 +103,10 @@ uint32_t addConstant(Chunk * chunk, Value value)
 	}
 	*/
 
+	push(value);
 	ARY_PUSH(chunk->aryValConstants, value);
+	pop();
+
 	return ARY_LEN(chunk->aryValConstants) - 1;
 }
 

@@ -22,9 +22,14 @@ static Obj * allocateObject(size_t size, ObjType type)
 {
 	Obj * object = (Obj*)xrealloc(NULL, 0, size);
 	object->type = type;
+	object->isMarked = false;
 
 	object->next = vm.objects;
 	vm.objects = object;
+
+#if DEBUG_LOG_GC
+	printf("%p allocate %zd for %d\n", (void*)object, size, type);
+#endif // DEBUG_LOG_GC
 
 	return object;
 }
@@ -36,7 +41,9 @@ static ObjString * allocateString(const char * aCh, int cCh, uint32_t hash)
 	pStr->length = cCh;
 	pStr->aChars = aCh;
 
+	push(OBJ_VAL(pStr));
 	tableSet(&vm.strings, pStr, NIL_VAL);
+	pop();
 
 	return pStr;
 }

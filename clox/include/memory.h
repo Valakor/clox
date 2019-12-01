@@ -9,6 +9,8 @@
 #pragma once
 
 #include "common.h"
+#include "value.h"
+#include "object.h"
 
 
 
@@ -23,9 +25,13 @@
 void * xrealloc(void * previous, size_t oldSize, size_t newSize);
 // void   xfree(void * p);
 
+void markValue(Value value);
+void markObject(Obj* obj);
+void markArray(Value* aryValue);
+
+void collectGarbage(void);
 void freeObjects(void);
 
 #if DEBUG_ALLOC
-extern int64_t s_cBAlloc;
-extern int64_t s_cBAllocMax;
+extern int64_t s_cAlloc;
 #endif // #if DEBUG_ALLOC

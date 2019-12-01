@@ -54,6 +54,16 @@ typedef struct sVM
 	//  Q: For (1) and (2), when do I check if stack growth is required? On
 	//     every PUSH(...) seems very slow, perhaps auto-generated instruction
 	//     in preamble to function calls?
+
+	// BB (matthewp) Find a way to use array.h helpers here
+
+	Obj ** grayStack;
+	int grayCount;
+	int grayCapacity;
+
+	size_t bytesAllocated;
+	size_t bytesAllocatedMax;
+	size_t nextGC;
 } VM;
 
 extern VM vm;

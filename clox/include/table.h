@@ -16,13 +16,13 @@
 
 // BB (matthewp) Add support for tables of other key types
 
-typedef struct
+typedef struct Entry
 {
 	ObjString * key;
 	Value value;
 } Entry;
 
-typedef struct
+typedef struct Table
 {
 	int count;
 	int capacity;
@@ -39,3 +39,6 @@ bool tableDelete(Table * table, ObjString * key);
 
 void tableAddAll(Table * from, Table * to);
 ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_t hash);
+
+void markTable(Table* table);
+void tableRemoveWhite(Table* table);

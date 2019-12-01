@@ -1176,3 +1176,14 @@ static void ifStatement(void)
 
 	patchJump(elseJump);
 }
+
+void markCompilerRoots(void)
+{
+	Compiler* compiler = current;
+
+	while (compiler != NULL)
+	{
+		markObject((Obj*)compiler->function);
+		compiler = compiler->enclosing;
+	}
+}

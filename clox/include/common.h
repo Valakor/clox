@@ -61,6 +61,14 @@
 #define DEBUG_PRINT_CODE 0
 #endif
 
+#ifndef DEBUG_STRESS_GC
+#define DEBUG_STRESS_GC 0
+#endif
+
+#ifndef DEBUG_LOG_GC
+#define DEBUG_LOG_GC 0
+#endif
+
 #ifndef DEBUG_ALLOC
 #define DEBUG_ALLOC (DEBUG || _DEBUG)
 #endif

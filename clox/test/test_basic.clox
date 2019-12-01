@@ -8,4 +8,13 @@ fun outer() {
 }
 
 var closure = outer();
+closure = outer();
+closure = outer();
+closure = outer();
+closure = outer();
+closure = outer();
+closure = outer();
+
 closure();
+
+print "bagels" + " " + "lox!";

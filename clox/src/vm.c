@@ -7,6 +7,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
@@ -36,6 +37,12 @@ void initVM()
 	initTable(&vm.globals);
 	initTable(&vm.strings);
 	vm.openUpvalues = NULL;
+	vm.grayStack = NULL;
+	vm.grayCount = 0;
+	vm.grayCapacity = 0;
+	vm.bytesAllocated = 0;
+	vm.bytesAllocatedMax = 0;
+	vm.nextGC = 512 * 1024;
 
 	defineNative("clock", clockNative);
 	defineNative("error", errNative);
@@ -47,9 +54,15 @@ void freeVM()
 	freeTable(&vm.strings);
 	freeObjects();
 
+	// BB (matthewp) Use array/memory helpers here
+
+	free(vm.grayStack);
+
+	ASSERTMSG(vm.bytesAllocated == 0, "Memory leak detected! (vm.bytesAllocated=%zu)", vm.bytesAllocated);
+
 #if DEBUG_ALLOC
-	ASSERTMSG(s_cBAlloc == 0, "Memory leak detected! (s_cBAlloc=%llu)", s_cBAlloc);
-	printf("[Memory] Max allocated bytes: %llu\n", s_cBAllocMax);
+	ASSERTMSG(s_cAlloc == 0, "Memory leak detected! (s_cAlloc=%llu)", s_cAlloc);
+	printf("[Memory] Max allocated bytes: %zu\n", vm.bytesAllocatedMax);
 #endif // #if DEBUG_ALLOC
 }
 
@@ -83,11 +96,13 @@ static bool isFalsey(Value value)
 
 static void concatenate(void)
 {
-	ObjString * b = AS_STRING(pop());
-	ObjString * a = AS_STRING(pop());
+	ObjString * b = AS_STRING(peek(0));
+	ObjString * a = AS_STRING(peek(1));
 
 	ObjString * result = concatStrings(a, b);
 
+	pop();
+	pop();
 	push(OBJ_VAL(result));
 }
 
