@@ -27,25 +27,6 @@
 // TODO: perform memory management manually to avoid system malloc / free
 //  See: http://www.craftinginterpreters.com/chunks-of-bytecode.html#challenges #3
 
-void * xmalloc(size_t size)
-{
-	void * p = malloc(size);
-	ASSERTMSG(p != NULL, "Out of memory!");
-	return p;
-}
-
-void * xcalloc(size_t elemCount, size_t elemSize)
-{
-	void * p = calloc(elemCount, elemSize);
-	ASSERTMSG(p != NULL, "Out of memory!");
-	return p;
-}
-
-void xfree(void * p)
-{
-	free(p);
-}
-
 #if DEBUG_ALLOC
 int64_t s_cAlloc = 0;
 #endif // #if DEBUG_ALLOC
@@ -95,7 +76,7 @@ void * xrealloc(void * previous, size_t oldSize, size_t newSize)
 	}
 	else if (newSize == 0)
 	{
-		xfree(previous);
+		free(previous);
 		return NULL;
 	}
 	else

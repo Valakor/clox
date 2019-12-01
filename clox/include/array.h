@@ -83,7 +83,7 @@ static inline void * Ary__AllocGrow(void * ary, uint32_t newCapMin, uint32_t ele
 	}
 	else
 	{
-		pHdr = xrealloc(NULL, 0, sizeAlloc);
+		pHdr = xmalloc(sizeAlloc);
 		pHdr->len = 0;
 	}
 
@@ -98,6 +98,6 @@ static inline void Ary__Free(void * ary, uint32_t elemSize)
 	{
 		uint32_t curCap = ARY_CAP(ary);
 		size_t sizeAllocOld = curCap * elemSize + offsetof(AryHdr, aB);
-		xrealloc(ARY__HDR(ary), sizeAllocOld, 0);
+		xfree(ARY__HDR(ary), sizeAllocOld);
 	}
 }
