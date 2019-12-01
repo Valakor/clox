@@ -14,7 +14,7 @@
 
 
 
-typedef enum eObjType
+typedef enum ObjType
 {
 	OBJ_STRING,
 	OBJ_UPVALUE,
@@ -23,14 +23,14 @@ typedef enum eObjType
 	OBJ_NATIVE,
 } ObjType;
 
-typedef struct sObj
+typedef struct Obj
 {
 	ObjType type;
 	bool isMarked;
-	struct sObj * next;
+	struct Obj * next;
 } Obj;
 
-typedef struct sObjString
+typedef struct ObjString
 {
 	Obj obj;
 	uint32_t hash;
@@ -38,15 +38,15 @@ typedef struct sObjString
 	const char * aChars;
 } ObjString;
 
-typedef struct sObjUpvalue
+typedef struct ObjUpvalue
 {
 	Obj obj;
 	Value * location;
 	Value closed;
-	struct sObjUpvalue * next;
+	struct ObjUpvalue * next;
 } ObjUpvalue;
 
-typedef struct sObjFunction
+typedef struct ObjFunction
 {
 	Obj obj;
 	int arity;
@@ -55,7 +55,7 @@ typedef struct sObjFunction
 	ObjString * name;
 } ObjFunction;
 
-typedef struct sObjClosure
+typedef struct ObjClosure
 {
 	Obj obj;
 	ObjFunction * function;
@@ -65,7 +65,7 @@ typedef struct sObjClosure
 
 typedef bool (*NativeFn)(int argCount, Value * args);
 
-typedef struct sObjNative
+typedef struct ObjNative
 {
 	Obj obj;
 	NativeFn function;

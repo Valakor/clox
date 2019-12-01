@@ -12,7 +12,7 @@
 
 
 
-typedef enum eOpCode
+typedef enum OpCode
 {
 	OP_CONSTANT,
 	OP_CONSTANT_LONG,
@@ -55,14 +55,14 @@ static_assert(OP_MAX <= UINT8_MAX + 1, "OpCode Max value is too large");
 
 
 
-typedef struct sInstructionRange
+typedef struct InstructionRange
 {
 	unsigned instructionMic;
 	unsigned instructionMac;
 	unsigned line;
 } InstructionRange; // tag = instrange
 
-typedef struct sChunk
+typedef struct Chunk
 {
 	uint8_t * aryB;
 	Value * aryValConstants;

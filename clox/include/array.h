@@ -31,7 +31,7 @@
 
 // Implementation of stretchy buffers, credit to Sean Barrett
 
-typedef struct
+typedef struct AryHdr
 {
 	uint32_t	len;
 	uint32_t	cap;

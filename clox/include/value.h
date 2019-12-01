@@ -12,7 +12,7 @@
 
 
 
-typedef enum
+typedef enum ValueType
 {
 	VAL_BOOL,
 	VAL_NIL,

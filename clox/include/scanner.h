@@ -10,7 +10,7 @@
 
 
 
-typedef enum eTokenType
+typedef enum TokenType
 {
 	// Single-character tokens
 	TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,
@@ -39,7 +39,7 @@ typedef enum eTokenType
 
 
 
-typedef struct sToken
+typedef struct Token
 {
 	TokenType type;
 	const char * start;
@@ -47,7 +47,7 @@ typedef struct sToken
 	int line;
 } Token;
 
-typedef struct sScanner
+typedef struct Scanner
 {
 	const char * start;
 	const char * current;
