@@ -43,28 +43,12 @@ CASSERT(sizeof(Value) == sizeof(void *));
 
 inline static uint64_t valueCastToUn(Value value)
 {
-	union
-	{
-		Value		value;
-		uint64_t	d;
-	} u;
-
-	u.value = value;
-
-	return u.d;
+	return *(uint64_t*)(&value);
 }
 
 inline static Value valueCastToValue(uint64_t d)
 {
-	union
-	{
-		Value		value;
-		uint64_t	d;
-	} u;
-
-	u.d = d;
-
-	return u.value;
+	return *(Value*)(&d);
 }
 
 inline static ValueType valueType(Value value)
