@@ -346,10 +346,8 @@ static InterpretResult run(void)
 #define READ_BYTE() (*ip++)
 #define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
 #define READ_U24() (ip += 3, (uint32_t)((ip[-3] << 16) | (ip[-2] << 8) | ip[-1]))
-#define READ_CONSTANT() (frame->closure->function->chunk.aryValConstants[READ_BYTE()])
-#define READ_CONSTANT_LONG() (frame->closure->function->chunk.aryValConstants[READ_U24()])
-#define READ_STRING() AS_STRING(READ_CONSTANT())
-#define READ_STRING_LONG() AS_STRING(READ_CONSTANT_LONG())
+#define READ_CONSTANT(short) frame->closure->function->chunk.aryValConstants[(short) ? READ_BYTE() : READ_U24()]
+#define READ_STRING(short) AS_STRING(READ_CONSTANT(short))
 #define BINARY_OP(valueType, op) \
 	do { \
 		if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -373,22 +371,13 @@ static InterpretResult run(void)
 		printf("\n");
 		disassembleInstruction(&frame->closure->function->chunk, (unsigned)(ip - frame->closure->function->chunk.aryB));
 #endif
-		uint8_t instruction;
-		switch (instruction = READ_BYTE())
+		uint8_t op;
+		switch (op = READ_BYTE())
 		{
 			case OP_CONSTANT:
-			{
-				Value constant = READ_CONSTANT();
-				push(constant);
-				break;
-			}
-
 			case OP_CONSTANT_LONG:
-			{
-				Value constant = READ_CONSTANT_LONG();
-				push(constant);
+				push(READ_CONSTANT(op == OP_CONSTANT));
 				break;
-			}
 
 			case OP_NIL: push(NIL_VAL); break;
 			case OP_TRUE: push(BOOL_VAL(true)); break;
@@ -424,7 +413,7 @@ static InterpretResult run(void)
 			case OP_GET_GLOBAL:
 			{
 				// TODO: Support more globals (OP_GET_GLOBAL_LONG)
-				ObjString * name = READ_STRING();
+				ObjString * name = READ_STRING(true);
 				Value value;
 				if (!tableGet(&vm.globals, name, &value))
 				{
@@ -437,7 +426,7 @@ static InterpretResult run(void)
 			case OP_DEFINE_GLOBAL:
 			{
 				// TODO: Support more globals (OP_DEFINE_GLOBAL_LONG)
-				ObjString * name = READ_STRING();
+				ObjString * name = READ_STRING(true);
 				tableSet(&vm.globals, name, peek(0));
 				pop();
 				break;
@@ -446,7 +435,7 @@ static InterpretResult run(void)
 			case OP_SET_GLOBAL:
 			{
 				// TODO: Support more globals (OP_SET_GLOBAL_LONG)
-				ObjString * name = READ_STRING();
+				ObjString * name = READ_STRING(true);
 				if (tableSet(&vm.globals, name, peek(0)))
 				{
 					tableDelete(&vm.globals, name);
@@ -470,6 +459,7 @@ static InterpretResult run(void)
 			}
 
 			case OP_GET_PROPERTY:
+			case OP_GET_PROPERTY_LONG:
 			{
 				Value p = peek(0);
 
@@ -479,7 +469,7 @@ static InterpretResult run(void)
 				}
 
 				ObjInstance* instance = AS_INSTANCE(p);
-				ObjString* name = READ_STRING();
+				ObjString* name = READ_STRING(op == OP_GET_PROPERTY);
 
 				Value value;
 				if (tableGet(&instance->fields, name, &value))
@@ -493,6 +483,7 @@ static InterpretResult run(void)
 			}
 
 			case OP_SET_PROPERTY:
+			case OP_SET_PROPERTY_LONG:
 			{
 				Value p = peek(1);
 
@@ -502,7 +493,9 @@ static InterpretResult run(void)
 				}
 
 				ObjInstance* instance = AS_INSTANCE(p);
-				tableSet(&instance->fields, READ_STRING(), peek(0));
+				ObjString* name = READ_STRING(op == OP_SET_PROPERTY);
+
+				tableSet(&instance->fields, name, peek(0));
 
 				Value value = pop();
 				pop();
@@ -596,31 +589,10 @@ static InterpretResult run(void)
 			}
 
 			case OP_CLOSURE:
-			{
-				ObjFunction * function = AS_FUNCTION(READ_CONSTANT());
-				ObjClosure * closure = newClosure(function);
-				push(OBJ_VAL(closure));
-
-				for (int i = 0; i < closure->upvalueCount; ++i)
-				{
-					uint8_t isLocal = READ_BYTE();
-					uint8_t index = READ_BYTE();
-					if (isLocal)
-					{
-						closure->upvalues[i] = captureUpvalue(frame->slots + index);
-					}
-					else
-					{
-						closure->upvalues[i] = frame->closure->upvalues[index];
-					}
-				}
-				break;
-			}
-
 			case OP_CLOSURE_LONG:
 			{
-				ObjFunction* function = AS_FUNCTION(READ_CONSTANT_LONG());
-				ObjClosure* closure = newClosure(function);
+				ObjFunction * function = AS_FUNCTION(READ_CONSTANT(op == OP_CLOSURE));
+				ObjClosure * closure = newClosure(function);
 				push(OBJ_VAL(closure));
 
 				for (int i = 0; i < closure->upvalueCount; ++i)
@@ -664,10 +636,9 @@ static InterpretResult run(void)
 			}
 
 			case OP_CLASS:
-			{
-				push(OBJ_VAL(newClass(READ_STRING())));
+			case OP_CLASS_LONG:
+				push(OBJ_VAL(newClass(READ_STRING(op == OP_CLASS))));
 				break;
-			}
 		}
 	}
 
@@ -676,8 +647,6 @@ static InterpretResult run(void)
 #undef READ_SHORT
 #undef READ_U24
 #undef READ_CONSTANT
-#undef READ_CONSTANT_LONG
 #undef READ_STRING
-#undef READ_STRING_LONG
 #undef BINARY_OP
 }

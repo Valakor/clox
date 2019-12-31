@@ -70,9 +70,9 @@ typedef enum eFunctionType
 	TYPE_SCRIPT,
 } FunctionType;
 
-typedef struct sCompiler
+typedef struct Compiler
 {
-	struct sCompiler * enclosing;
+	struct Compiler * enclosing;
 	Scanner * scanner;
 	Parser * parser;
 
@@ -302,7 +302,7 @@ static uint32_t makeConstant(Value value)
 
 	uint32_t constant = addConstant(currentChunk(), value);
 
-	if (constant > 16777215) // UINT24_MAX
+	if (constant > UINT24_MAX)
 	{
 		error("Too many constants in one chunk.");
 		return 0;
@@ -495,21 +495,14 @@ static void dot(bool canAssign)
 	consume(TOKEN_IDENTIFIER, "Expect property name after '.'");
 	uint32_t name = identifierConstant(&current->parser->previous);
 
-	// TODO: Handle > 255 property constants (OP_SET_PROPERTY_LONG, OP_GET_PROPERTY_LONG)
-
-	if (name > UINT8_MAX)
-	{
-		error("Too many constants for 'dot' operator");
-	}
-
 	if (canAssign && match(TOKEN_EQUAL))
 	{
 		expression();
-		emitBytes(OP_SET_PROPERTY, (uint8_t)name);
+		emitConstantHelper(name, OP_SET_PROPERTY, OP_SET_PROPERTY_LONG);
 	}
 	else
 	{
-		emitBytes(OP_GET_PROPERTY, (uint8_t)name);
+		emitConstantHelper(name, OP_GET_PROPERTY, OP_GET_PROPERTY_LONG);
 	}
 }
 
@@ -585,10 +578,12 @@ static void namedVariable(Token name, bool canAssign)
 
 	if (resolveLocal(current, &name, &arg))
 	{
-		getOp = OP_GET_LOCAL;
-		setOp = OP_SET_LOCAL;
+		// TODO: Support LONG variants?
 
 		ASSERT(arg < UINT8_COUNT);
+
+		getOp = OP_GET_LOCAL;
+		setOp = OP_SET_LOCAL;
 	}
 	else if (resolveUpvalue(current, &name, &arg))
 	{
@@ -1005,14 +1000,7 @@ static void classDeclaration(void)
 	uint32_t nameConstant = identifierConstant(&current->parser->previous);
 	declareVariable();
 
-	// TODO: Support more than 255 classes
-
-	if (nameConstant > UINT8_MAX)
-	{
-		error("Cannot declare more than 255 classes.");
-	}
-
-	emitBytes(OP_CLASS, (uint8_t)nameConstant);
+	emitConstantHelper(nameConstant, OP_CLASS, OP_CLASS_LONG);
 	defineVariable(nameConstant);
 
 	consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");

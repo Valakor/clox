@@ -166,8 +166,12 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return byteInstruction("OP_SET_UPVALUE", chunk, offset);
 		case OP_GET_PROPERTY:
 			return constantInstruction("OP_GET_PROPERTY", chunk, offset, false);
+		case OP_GET_PROPERTY_LONG:
+			return constantInstruction("OP_GET_PROPERTY_LONG", chunk, offset, true);
 		case OP_SET_PROPERTY:
-			return constantInstruction("OP_SET_PROPERTY", chunk, offset, false);;
+			return constantInstruction("OP_SET_PROPERTY", chunk, offset, false);
+		case OP_SET_PROPERTY_LONG:
+			return constantInstruction("OP_SET_PROPERTY_LONG", chunk, offset, true);
 		case OP_EQUAL:
 			return simpleInstruction("OP_EQUAL", offset);
 		case OP_GREATER:
@@ -206,6 +210,8 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return simpleInstruction("OP_RETURN", offset);
 		case OP_CLASS:
 			return constantInstruction("OP_CLASS", chunk, offset, false);
+		case OP_CLASS_LONG:
+			return constantInstruction("OP_CLASS_LONG", chunk, offset, true);
 		default:
 			printf("Unknown opcode %d\n", instruction);
 			return offset + 1;
