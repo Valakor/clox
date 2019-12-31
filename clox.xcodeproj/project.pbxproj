@@ -97,17 +97,17 @@
 		D1E1F07F203B62810028AE50 /* include */ = {
 			isa = PBXGroup;
 			children = (
-				D191316C21CD655D009BABF0 /* table.h */,
-				D10828822159EBC9000B5155 /* object.h */,
 				D168B98B20A8E84E0064E9D4 /* array.h */,
-				D1E1F081203B62B30028AE50 /* common.h */,
 				D1E1F082203B648B0028AE50 /* chunk.h */,
-				D1E1F085203B66300028AE50 /* memory.h */,
+				D1E1F081203B62B30028AE50 /* common.h */,
+				D17354CE20AFCB4800036F63 /* compiler.h */,
 				D1E1F088203B68970028AE50 /* debug.h */,
+				D1E1F085203B66300028AE50 /* memory.h */,
+				D10828822159EBC9000B5155 /* object.h */,
+				D17354D320AFCC8100036F63 /* scanner.h */,
+				D191316C21CD655D009BABF0 /* table.h */,
 				D1E1F08B203B6A240028AE50 /* value.h */,
 				D179249C207854EF00FE328C /* vm.h */,
-				D17354CE20AFCB4800036F63 /* compiler.h */,
-				D17354D320AFCC8100036F63 /* scanner.h */,
 			);
 			path = include;
 			sourceTree = "<group>";
@@ -115,17 +115,17 @@
 		D1E1F080203B62890028AE50 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				D191316D21CD6564009BABF0 /* table.c */,
-				D10828802159E6DD000B5155 /* object.c */,
-				D1E1F076203B61300028AE50 /* main.c */,
 				D1E1F083203B649A0028AE50 /* chunk.c */,
-				D1E1F086203B670D0028AE50 /* memory.c */,
-				D1E1F089203B68A20028AE50 /* debug.c */,
-				D1E1F08C203B6A2E0028AE50 /* value.c */,
 				D1F0014920435C9900876B30 /* common.c */,
-				D179249D2078550300FE328C /* vm.c */,
 				D17354CF20AFCB5600036F63 /* compiler.c */,
+				D1E1F089203B68A20028AE50 /* debug.c */,
+				D1E1F076203B61300028AE50 /* main.c */,
+				D1E1F086203B670D0028AE50 /* memory.c */,
+				D10828802159E6DD000B5155 /* object.c */,
 				D17354D120AFCC7100036F63 /* scanner.c */,
+				D191316D21CD6564009BABF0 /* table.c */,
+				D1E1F08C203B6A2E0028AE50 /* value.c */,
+				D179249D2078550300FE328C /* vm.c */,
 			);
 			path = src;
 			sourceTree = "<group>";
