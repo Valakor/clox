@@ -678,6 +678,6 @@ static InterpretResult run(void)
 #undef READ_CONSTANT
 #undef READ_CONSTANT_LONG
 #undef READ_STRING
-#undef READ_STRONG_LONG
+#undef READ_STRING_LONG
 #undef BINARY_OP
 }
