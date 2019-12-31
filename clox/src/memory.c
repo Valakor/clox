@@ -109,6 +109,20 @@ static void freeObject(Obj * object)
 			break;
 		}
 
+		case OBJ_CLASS:
+		{
+			FREE(ObjClass, object);
+			break;
+		}
+
+		case OBJ_INSTANCE:
+		{
+			ObjInstance * instance = (ObjInstance*)object;
+			freeTable(&instance->fields);
+			FREE(ObjInstance, object);
+			break;
+		}
+
 		case OBJ_CLOSURE:
 		{
 			ObjClosure * closure = (ObjClosure *)object;
@@ -183,6 +197,21 @@ static void blackenObject(Obj* obj)
 		ObjFunction* function = (ObjFunction*)obj;
 		markObject((Obj*)function->name);
 		markArray(function->chunk.aryValConstants);
+		break;
+	}
+
+	case OBJ_CLASS:
+	{
+		ObjClass* klass = (ObjClass*)obj;
+		markObject((Obj*)klass->name);
+		break;
+	}
+
+	case OBJ_INSTANCE:
+	{
+		ObjInstance* instance = (ObjInstance*)obj;
+		markObject((Obj*)instance->klass);
+		markTable(&instance->fields);
 		break;
 	}
 

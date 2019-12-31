@@ -29,6 +29,7 @@ static void defineNative(const char * name, NativeFn function);
 
 static bool clockNative(int argCount, Value * args);
 static bool errNative(int argCount, Value * args);
+static bool deleteNative(int argCount, Value * args);
 
 void initVM()
 {
@@ -46,6 +47,7 @@ void initVM()
 
 	defineNative("clock", clockNative);
 	defineNative("error", errNative);
+	defineNative("delete", deleteNative);
 }
 
 void freeVM()
@@ -161,6 +163,20 @@ static bool errNative(int argCount, Value * args)
 	return false;
 }
 
+static bool deleteNative(int argCount, Value * args)
+{
+	if (argCount == 2 && IS_INSTANCE(args[0]) && IS_STRING(args[1]))
+	{
+		ObjInstance* instance = AS_INSTANCE(args[0]);
+		ObjString* name = AS_STRING(args[1]);
+		args[-1] = BOOL_VAL(tableDelete(&instance->fields, name));
+		return true;
+	}
+
+	args[1] = OBJ_VAL(copyString("Invalid arguments to delete", 27));
+	return false;
+}
+
 static void runtimeError(const char * format, ...)
 {
 	fputs("ERROR: ", stderr);
@@ -250,6 +266,13 @@ static bool callValue(Value callee, int argCount)
 					runtimeError(AS_CSTRING(vm.stackTop[-argCount - 1]));
 					return false;
 				}
+			}
+
+			case OBJ_CLASS:
+			{
+				ObjClass* klass = AS_CLASS(callee);
+				vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
+				return true;
 			}
 
 			default:
@@ -447,6 +470,50 @@ static InterpretResult run(void)
 				break;
 			}
 
+			case OP_GET_PROPERTY:
+			{
+				Value p = peek(0);
+
+				if (!IS_INSTANCE(p))
+				{
+					runtimeError("Trying to access a property on a non-instance object.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				ObjInstance* instance = AS_INSTANCE(p);
+				ObjString* name = READ_STRING();
+
+				Value value;
+				if (tableGet(&instance->fields, name, &value))
+				{
+					pop();
+					push(value);
+					break;
+				}
+
+				runtimeError("Undefined property '%s'.", name->aChars);
+				return INTERPRET_RUNTIME_ERROR;
+			}
+
+			case OP_SET_PROPERTY:
+			{
+				Value p = peek(1);
+
+				if (!IS_INSTANCE(p))
+				{
+					runtimeError("Trying to set a property on a non-instance object.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				ObjInstance* instance = AS_INSTANCE(p);
+				tableSet(&instance->fields, READ_STRING(), peek(0));
+
+				Value value = pop();
+				pop();
+				push(value);
+				break;
+			}
+
 			case OP_EQUAL:
 			{
 				Value b = pop();
@@ -601,6 +668,12 @@ static InterpretResult run(void)
 
 				frame = &vm.frames[vm.frameCount - 1];
 				ip = frame->ip;
+				break;
+			}
+
+			case OP_CLASS:
+			{
+				push(OBJ_VAL(newClass(READ_STRING())));
 				break;
 			}
 		}

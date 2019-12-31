@@ -108,6 +108,7 @@ static void emitReturn(void);
 static void expression(void);
 static void statement(void);
 static void declaration(void);
+static void classDeclaration(void);
 static void funDeclaration(void);
 static void varDeclaration(void);
 static void printStatement(void);
@@ -489,6 +490,29 @@ static void call(bool canAssign)
 	emitBytes(OP_CALL, argCount);
 }
 
+static void dot(bool canAssign)
+{
+	consume(TOKEN_IDENTIFIER, "Expect property name after '.'");
+	uint32_t name = identifierConstant(&current->parser->previous);
+
+	// TODO: Handle > 255 property constants (OP_SET_PROPERTY_LONG, OP_GET_PROPERTY_LONG)
+
+	if (name > UINT8_MAX)
+	{
+		error("Too many constants for 'dot' operator");
+	}
+
+	if (canAssign && match(TOKEN_EQUAL))
+	{
+		expression();
+		emitBytes(OP_SET_PROPERTY, (uint8_t)name);
+	}
+	else
+	{
+		emitBytes(OP_GET_PROPERTY, (uint8_t)name);
+	}
+}
+
 static void literal(bool canAssign)
 {
 	UNUSED(canAssign);
@@ -632,7 +656,7 @@ static const ParseRule rules[] =
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_LEFT_BRACE
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_RIGHT_BRACE
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_COMMA
-	{ NULL,     NULL,    PREC_CALL },       // TOKEN_DOT
+	{ NULL,     dot,     PREC_CALL },       // TOKEN_DOT
 	{ unary,    binary,  PREC_TERM },       // TOKEN_MINUS
 	{ NULL,     binary,  PREC_TERM },       // TOKEN_PLUS
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_SEMICOLON
@@ -952,7 +976,11 @@ static void function(FunctionType type)
 
 static void declaration(void)
 {
-	if (match(TOKEN_FUN))
+	if (match(TOKEN_CLASS))
+	{
+		classDeclaration();
+	}
+	else if (match(TOKEN_FUN))
 	{
 		funDeclaration();
 	}
@@ -969,6 +997,26 @@ static void declaration(void)
 	{
 		synchronize();
 	}
+}
+
+static void classDeclaration(void)
+{
+	consume(TOKEN_IDENTIFIER, "Expect class name.");
+	uint32_t nameConstant = identifierConstant(&current->parser->previous);
+	declareVariable();
+
+	// TODO: Support more than 255 classes
+
+	if (nameConstant > UINT8_MAX)
+	{
+		error("Cannot declare more than 255 classes.");
+	}
+
+	emitBytes(OP_CLASS, (uint8_t)nameConstant);
+	defineVariable(nameConstant);
+
+	consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+	consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
 }
 
 static void funDeclaration(void)

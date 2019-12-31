@@ -10,11 +10,12 @@
 
 #include "common.h"
 #include "value.h"
-#include "object.h"
 
 
 
 // BB (matthewp) Add support for tables of other key types
+
+typedef struct ObjString ObjString;
 
 typedef struct Entry
 {

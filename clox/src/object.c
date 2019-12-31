@@ -80,6 +80,21 @@ ObjFunction * newFunction(void)
 	return function;
 }
 
+ObjClass * newClass(ObjString * name)
+{
+	ObjClass * klass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
+	klass->name = name;
+	return klass;
+}
+
+ObjInstance * newInstance(ObjClass * klass)
+{
+	ObjInstance * instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE);
+	instance->klass = klass;
+	initTable(&instance->fields);
+	return instance;
+}
+
 ObjClosure * newClosure(ObjFunction * function)
 {
 	ObjUpvalue ** upvalues = CARY_ALLOCATE(ObjUpvalue *, function->upvalueCount);
@@ -172,6 +187,15 @@ void printObject(Value value)
 			{
 				printf("<fn %s>", AS_FUNCTION(value)->name->aChars);
 			}
+			break;
+
+		case OBJ_CLASS:
+			printf("%s", AS_CLASS(value)->name->aChars);
+			break;
+
+		case OBJ_INSTANCE:
+			// TODO: Call (optional) user-supplied toString() method
+			printf("%s instance", AS_INSTANCE(value)->klass->name->aChars);
 			break;
 
 		case OBJ_CLOSURE:
