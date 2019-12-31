@@ -336,18 +336,24 @@ static InterpretResult run(void)
 	// BB (matthewp) Avoid extra push-pop operations by modifying the top of the stack in-place
 	//  Example: In unary negation, instead of: push(negate(pop())), do negate(peek())
 
+#define RETURN_RUNTIME_ERR(fmt, ...) \
+	do { \
+		frame->ip = ip; \
+		runtimeError(fmt, ##__VA_ARGS__); \
+		return INTERPRET_RUNTIME_ERROR; \
+	} while (false)
+
 #define READ_BYTE() (*ip++)
 #define READ_SHORT() (ip += 2, (uint16_t)((ip[-2] << 8) | ip[-1]))
 #define READ_U24() (ip += 3, (uint32_t)((ip[-3] << 16) | (ip[-2] << 8) | ip[-1]))
 #define READ_CONSTANT() (frame->closure->function->chunk.aryValConstants[READ_BYTE()])
 #define READ_CONSTANT_LONG() (frame->closure->function->chunk.aryValConstants[READ_U24()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
+#define READ_STRING_LONG() AS_STRING(READ_CONSTANT_LONG())
 #define BINARY_OP(valueType, op) \
 	do { \
 		if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
-			frame->ip = ip; \
-			runtimeError("Operands must be numbers."); \
-			return INTERPRET_RUNTIME_ERROR; \
+			RETURN_RUNTIME_ERR("Operands must be numbers."); \
 		} \
 		double b = AS_NUMBER(pop()); \
 		double a = AS_NUMBER(pop()); \
@@ -392,10 +398,7 @@ static InterpretResult run(void)
 			case OP_POPN:
 			{
 				uint32_t num = READ_BYTE() + 2;
-				while (num--)
-				{
-					pop();
-				}
+				while (num--) pop();
 				break;
 			}
 
@@ -425,9 +428,7 @@ static InterpretResult run(void)
 				Value value;
 				if (!tableGet(&vm.globals, name, &value))
 				{
-					frame->ip = ip;
-					runtimeError("Undefined variable '%s'.", name->aChars);
-					return INTERPRET_RUNTIME_ERROR;
+					RETURN_RUNTIME_ERR("Undefined variable '%s'.", name->aChars);
 				}
 				push(value);
 				break;
@@ -449,9 +450,7 @@ static InterpretResult run(void)
 				if (tableSet(&vm.globals, name, peek(0)))
 				{
 					tableDelete(&vm.globals, name);
-					frame->ip = ip;
-					runtimeError("Undefined variable '%s'.", name->aChars);
-					return INTERPRET_RUNTIME_ERROR;
+					RETURN_RUNTIME_ERR("Undefined variable '%s'.", name->aChars);
 				}
 				break;
 			}
@@ -476,8 +475,7 @@ static InterpretResult run(void)
 
 				if (!IS_INSTANCE(p))
 				{
-					runtimeError("Trying to access a property on a non-instance object.");
-					return INTERPRET_RUNTIME_ERROR;
+					RETURN_RUNTIME_ERR("Trying to access a property on a non-instance object.");
 				}
 
 				ObjInstance* instance = AS_INSTANCE(p);
@@ -491,8 +489,7 @@ static InterpretResult run(void)
 					break;
 				}
 
-				runtimeError("Undefined property '%s'.", name->aChars);
-				return INTERPRET_RUNTIME_ERROR;
+				RETURN_RUNTIME_ERR("Undefined property '%s'.", name->aChars);
 			}
 
 			case OP_SET_PROPERTY:
@@ -501,8 +498,7 @@ static InterpretResult run(void)
 
 				if (!IS_INSTANCE(p))
 				{
-					runtimeError("Trying to set a property on a non-instance object.");
-					return INTERPRET_RUNTIME_ERROR;
+					RETURN_RUNTIME_ERR("Trying to set a property on a non-instance object.");
 				}
 
 				ObjInstance* instance = AS_INSTANCE(p);
@@ -528,9 +524,7 @@ static InterpretResult run(void)
 			case OP_NEGATE:
 				if (!IS_NUMBER(peek(0)))
 				{
-					frame->ip = ip;
-					runtimeError("Operand must be a number.");
-					return INTERPRET_RUNTIME_ERROR;
+					RETURN_RUNTIME_ERR("Operand must be a number.");
 				}
 
 				push(NUMBER_VAL(-AS_NUMBER(pop())));
@@ -550,9 +544,7 @@ static InterpretResult run(void)
 				}
 				else
 				{
-					frame->ip = ip;
-					runtimeError("Operands must be two numbers or two strings");
-					return INTERPRET_RUNTIME_ERROR;
+					RETURN_RUNTIME_ERR("Operands must be two numbers or two strings");
 				}
 				break;
 			}
@@ -679,10 +671,13 @@ static InterpretResult run(void)
 		}
 	}
 
+#undef RETURN_RUNTIME_ERR
 #undef READ_BYTE
+#undef READ_SHORT
+#undef READ_U24
 #undef READ_CONSTANT
 #undef READ_CONSTANT_LONG
-#undef READ_SHORT
 #undef READ_STRING
+#undef READ_STRONG_LONG
 #undef BINARY_OP
 }
