@@ -31,6 +31,7 @@ static bool clockNative(int argCount, Value * args);
 static bool errNative(int argCount, Value * args);
 static bool getNative(int argCount, Value * args);
 static bool deleteNative(int argCount, Value * args);
+static bool isNative(int argCount, Value * args);
 
 void initVM()
 {
@@ -50,6 +51,7 @@ void initVM()
 	defineNative("error", errNative);
 	defineNative("get", getNative);
 	defineNative("delete", deleteNative);
+	defineNative("is", isNative);
 }
 
 void freeVM()
@@ -167,12 +169,12 @@ static bool errNative(int argCount, Value * args)
 
 static bool getNative(int argCount, Value * args)
 {
-	if (argCount == 3 && IS_INSTANCE(args[0]) && IS_STRING(args[1]))
+	if ((argCount == 2 || argCount == 3) && IS_INSTANCE(args[0]) && IS_STRING(args[1]))
 	{
 		ObjInstance* instance = AS_INSTANCE(args[0]);
 		ObjString* name = AS_STRING(args[1]);
 		Value value;
-		if (!tableGet(&instance->fields, name, &value)) value = args[2];
+		if (!tableGet(&instance->fields, name, &value)) value = (argCount == 2) ? NIL_VAL : args[2];
 		args[-1] = value;
 		return true;
 	}
@@ -192,6 +194,20 @@ static bool deleteNative(int argCount, Value * args)
 	}
 
 	args[-1] = OBJ_VAL(copyString("Invalid arguments to delete", 27));
+	return false;
+}
+
+static bool isNative(int argCount, Value * args)
+{
+	if (argCount == 2 && IS_INSTANCE(args[0]) && IS_CLASS(args[1]))
+	{
+		ObjInstance* instance = AS_INSTANCE(args[0]);
+		ObjClass* klass = AS_CLASS(args[1]);
+		args[-1] = BOOL_VAL(instance->klass == klass);
+		return true;
+	}
+
+	args[-1] = OBJ_VAL(copyString("Invalid arguments to is", 23));
 	return false;
 }
 
