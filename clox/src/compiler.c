@@ -18,7 +18,7 @@
 
 
 
-typedef struct sParser
+typedef struct Parser
 {
 	Token current;
 	Token previous;
@@ -27,7 +27,7 @@ typedef struct sParser
 	bool panicMode;
 } Parser;
 
-typedef enum ePrecedence
+typedef enum Precedence
 {
 	PREC_NONE,
 	PREC_ASSIGNMENT,	// =
@@ -44,27 +44,27 @@ typedef enum ePrecedence
 
 typedef void (*ParseFn)(bool canAssign);
 
-typedef struct sParseRule
+typedef struct ParseRule
 {
 	ParseFn prefix;
 	ParseFn infix;
 	Precedence precedence;
 } ParseRule;
 
-typedef struct sLocal
+typedef struct Local
 {
 	Token name;
 	int depth;
 	bool isCaptured;
 } Local;
 
-typedef struct sUpvalue
+typedef struct Upvalue
 {
 	uint8_t index;
 	bool isLocal;
 } Upvalue;
 
-typedef enum eFunctionType
+typedef enum FunctionType
 {
 	TYPE_FUNCTION,
 	TYPE_SCRIPT,
