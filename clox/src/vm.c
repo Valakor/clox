@@ -398,9 +398,23 @@ static InterpretResult run(void)
 				break;
 			}
 
+			case OP_GET_LOCAL_LONG:
+			{
+				uint32_t slot = READ_U24();
+				push(frame->slots[slot]);
+				break;
+			}
+
 			case OP_SET_LOCAL:
 			{
 				uint8_t slot = READ_BYTE();
+				frame->slots[slot] = peek(0);
+				break;
+			}
+
+			case OP_SET_LOCAL_LONG:
+			{
+				uint32_t slot = READ_U24();
 				frame->slots[slot] = peek(0);
 				break;
 			}
@@ -411,9 +425,9 @@ static InterpretResult run(void)
 			//  sure it's actually been defined already?).
 
 			case OP_GET_GLOBAL:
+			case OP_GET_GLOBAL_LONG:
 			{
-				// TODO: Support more globals (OP_GET_GLOBAL_LONG)
-				ObjString * name = READ_STRING(true);
+				ObjString * name = READ_STRING(op == OP_GET_GLOBAL);
 				Value value;
 				if (!tableGet(&vm.globals, name, &value))
 				{
@@ -424,18 +438,18 @@ static InterpretResult run(void)
 			}
 
 			case OP_DEFINE_GLOBAL:
+			case OP_DEFINE_GLOBAL_LONG:
 			{
-				// TODO: Support more globals (OP_DEFINE_GLOBAL_LONG)
-				ObjString * name = READ_STRING(true);
+				ObjString * name = READ_STRING(op == OP_DEFINE_GLOBAL);
 				tableSet(&vm.globals, name, peek(0));
 				pop();
 				break;
 			}
 
 			case OP_SET_GLOBAL:
+			case OP_SET_GLOBAL_LONG:
 			{
-				// TODO: Support more globals (OP_SET_GLOBAL_LONG)
-				ObjString * name = READ_STRING(true);
+				ObjString * name = READ_STRING(op == OP_SET_GLOBAL);
 				if (tableSet(&vm.globals, name, peek(0)))
 				{
 					tableDelete(&vm.globals, name);
@@ -451,9 +465,23 @@ static InterpretResult run(void)
 				break;
 			}
 
+			case OP_GET_UPVALUE_LONG:
+			{
+				uint32_t slot = READ_U24();
+				push(*frame->closure->upvalues[slot]->location);
+				break;
+			}
+
 			case OP_SET_UPVALUE:
 			{
 				uint8_t slot = READ_BYTE();
+				*frame->closure->upvalues[slot]->location = peek(0);
+				break;
+			}
+
+			case OP_SET_UPVALUE_LONG:
+			{
+				uint32_t slot = READ_U24();
 				*frame->closure->upvalues[slot]->location = peek(0);
 				break;
 			}
@@ -597,8 +625,11 @@ static InterpretResult run(void)
 
 				for (int i = 0; i < closure->upvalueCount; ++i)
 				{
-					uint8_t isLocal = READ_BYTE();
-					uint8_t index = READ_BYTE();
+					uint8_t flag = READ_BYTE();
+					bool isLocal = flag & 0x1;
+					bool isLong = flag & 0x2;
+					uint32_t index = (isLong) ? READ_U24() : READ_BYTE();
+
 					if (isLocal)
 					{
 						closure->upvalues[i] = captureUpvalue(frame->slots + index);

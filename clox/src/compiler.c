@@ -60,7 +60,7 @@ typedef struct Local
 
 typedef struct Upvalue
 {
-	uint8_t index;
+	uint32_t index;
 	bool isLocal;
 } Upvalue;
 
@@ -79,12 +79,10 @@ typedef struct Compiler
 	ObjFunction * function;
 	FunctionType type;
 
-	// TODO: Enhancement. Allow more local variables
 	// TODO: Optimization. Make lookup faster (currently requires linear search through array)
 	// TODO: Enhancement. Add concept of variables that don't allow re-assignment ('let'?)
-	Local locals[UINT8_COUNT];
-	int localCount;
-	Upvalue upvalues[UINT8_COUNT];
+	Local * locals;
+	Upvalue * upvalues;
 	int scopeDepth;
 } Compiler;
 
@@ -104,6 +102,7 @@ static void emitBytes(uint8_t byte1, uint8_t byte2);
 static Chunk * currentChunk(void);
 static void initCompiler(Compiler * compiler, Scanner * scanner, Parser * parser, FunctionType type);
 static ObjFunction * endCompiler(void);
+static void destroyCompiler(Compiler * compiler);
 static void emitReturn(void);
 static void expression(void);
 static void statement(void);
@@ -144,6 +143,7 @@ ObjFunction * compile(const char * source)
 	}
 
 	ObjFunction * function = endCompiler();
+	destroyCompiler(&compiler);
 
 	return parser.hadError ? NULL : function;
 }
@@ -257,15 +257,29 @@ static void synchronize(void)
 	}
 }
 
-static void emitByte(uint8_t byte)
+static inline void emitByte(uint8_t byte)
 {
 	writeChunk(currentChunk(), byte, current->parser->previous.line);
 }
 
-static void emitBytes(uint8_t byte1, uint8_t byte2)
+static inline void emitBytes(uint8_t byte1, uint8_t byte2)
 {
 	emitByte(byte1);
 	emitByte(byte2);
+}
+
+static inline void emitU24(uint32_t n)
+{
+	ASSERT(n <= UINT24_MAX);
+
+	uint8_t b = (n >> (16)) & UINT8_MAX;
+	emitByte(b);
+
+	b = (n >> (8)) & UINT8_MAX;
+	emitByte(b);
+
+	b = n & UINT8_MAX;
+	emitByte(b);
 }
 
 static void emitLoop(uint32_t loopStart)
@@ -324,12 +338,7 @@ static void emitConstantHelper(uint32_t constant, OpCode opShort, OpCode opLong)
 		// Use 3-byte constant op
 
 		emitByte((uint8_t)opLong);
-
-		for (int i = 0; i < 3; i++)
-		{
-			uint8_t b = (constant >> (8 * (3 - i - 1))) & UINT8_MAX;
-			emitByte(b);
-		}
+		emitU24(constant);
 	}
 	else
 	{
@@ -363,10 +372,11 @@ static void initCompiler(Compiler * compiler, Scanner * scanner, Parser * parser
 	compiler->enclosing = current;
 	compiler->scanner = scanner;
 	compiler->parser = parser;
-	compiler->function = NULL;
 	compiler->type = type;
-	compiler->localCount = 0;
+	compiler->locals = NULL;
+	compiler->upvalues = NULL;
 	compiler->scopeDepth = 0;
+	compiler->function = NULL;
 	compiler->function = newFunction();
 	current = compiler;
 
@@ -375,11 +385,12 @@ static void initCompiler(Compiler * compiler, Scanner * scanner, Parser * parser
 		current->function->name = copyString(current->parser->previous.start, current->parser->previous.length);
 	}
 
-	Local * local = &current->locals[current->localCount++];
-	local->depth = 0;
-	local->isCaptured = false;
-	local->name.start = "";
-	local->name.length = 0;
+	Local local;
+	local.depth = 0;
+	local.isCaptured = false;
+	local.name.start = "";
+	local.name.length = 0;
+	ARY_PUSH(current->locals, local);
 }
 
 static ObjFunction * endCompiler(void)
@@ -401,6 +412,12 @@ static ObjFunction * endCompiler(void)
 	return function;
 }
 
+static void destroyCompiler(Compiler * compiler)
+{
+	ARY_FREE(compiler->locals);
+	ARY_FREE(compiler->upvalues);
+}
+
 static void beginScope(void)
 {
 	current->scopeDepth++;
@@ -412,10 +429,10 @@ static void endScope(void)
 
 	unsigned numLocals = 0;
 
-	while (current->localCount > 0 &&
-		   current->locals[current->localCount - 1].depth > current->scopeDepth)
+	while (ARY_LEN(current->locals) > 0 &&
+		   ARY_TAIL(current->locals)->depth > current->scopeDepth)
 	{
-		if (current->locals[current->localCount - 1].isCaptured)
+		if (ARY_TAIL(current->locals)->isCaptured)
 		{
 			emitByte(OP_CLOSE_UPVALUE);
 		}
@@ -425,7 +442,7 @@ static void endScope(void)
 		}
 
 		numLocals++;
-		current->localCount--;
+		ARY_POP(current->locals);
 	}
 
 	// TODO: Get this working again
@@ -573,48 +590,40 @@ static void or_(bool canAssign)
 
 static void namedVariable(Token name, bool canAssign)
 {
-	uint8_t getOp, setOp;
+	uint8_t getOp, getOpLong, setOp, setOpLong;
 	uint32_t arg;
 
 	if (resolveLocal(current, &name, &arg))
 	{
-		// TODO: Support LONG variants?
-
-		ASSERT(arg < UINT8_COUNT);
-
 		getOp = OP_GET_LOCAL;
+		getOpLong = OP_GET_LOCAL_LONG;
 		setOp = OP_SET_LOCAL;
+		setOpLong = OP_SET_LOCAL_LONG;
 	}
 	else if (resolveUpvalue(current, &name, &arg))
 	{
-		// TODO: Support LONG variants?
-
 		getOp = OP_GET_UPVALUE;
+		getOpLong = OP_GET_UPVALUE_LONG;
 		setOp = OP_SET_UPVALUE;
+		setOpLong = OP_SET_UPVALUE_LONG;
 	}
 	else
 	{
 		arg = identifierConstant(&name);
 		getOp = OP_GET_GLOBAL;
+		getOpLong = OP_GET_GLOBAL_LONG;
 		setOp = OP_SET_GLOBAL;
-
-		// TODO: Support OP_DEFINE_GLOBAL_LONG opcode
-
-		if (arg >= UINT8_COUNT)
-		{
-			error("Too many global variables defined.");
-			return;
-		}
+		setOpLong = OP_SET_GLOBAL_LONG;
 	}
 
 	if (canAssign && match(TOKEN_EQUAL))
 	{
 		expression();
-		emitBytes(setOp, (uint8_t)arg);
+		emitConstantHelper(arg, setOp, setOpLong);
 	}
 	else
 	{
-		emitBytes(getOp, (uint8_t)arg);
+		emitConstantHelper(arg, getOp, getOpLong);
 	}
 }
 
@@ -731,7 +740,7 @@ static bool identifiersEqual(Token * a, Token * b)
 
 static bool resolveLocal(Compiler * compiler, Token * name, uint32_t * localIndex)
 {
-	for (int i = compiler->localCount - 1; i >= 0; i--)
+	for (int i = ARY_LEN(compiler->locals) - 1; i >= 0; i--)
 	{
 		Local * local = &compiler->locals[i];
 
@@ -750,9 +759,10 @@ static bool resolveLocal(Compiler * compiler, Token * name, uint32_t * localInde
 	return false;
 }
 
-static uint32_t addUpvalue(Compiler * compiler, uint8_t index, bool isLocal)
+static uint32_t addUpvalue(Compiler * compiler, uint32_t index, bool isLocal)
 {
 	uint32_t upvalueCount = compiler->function->upvalueCount;
+	ASSERT(upvalueCount == ARY_LEN(compiler->upvalues));
 
 	for (uint32_t i = 0; i < upvalueCount; ++i)
 	{
@@ -762,16 +772,19 @@ static uint32_t addUpvalue(Compiler * compiler, uint8_t index, bool isLocal)
 			return i;
 	}
 
-	if (upvalueCount == UINT8_COUNT)
+	if (upvalueCount >= UINT24_COUNT)
 	{
-		error("Too many closure variables in function.");
+		error("Too many captured variables in closure.");
 		return 0;
 	}
 
-	compiler->upvalues[upvalueCount].isLocal = isLocal;
-	compiler->upvalues[upvalueCount].index = index;
+	Upvalue upvalue;
+	upvalue.isLocal = isLocal;
+	upvalue.index = index;
+	ARY_PUSH(compiler->upvalues, upvalue);
+	compiler->function->upvalueCount++;
 
-	return compiler->function->upvalueCount++;
+	return ARY_LEN(compiler->upvalues) - 1;
 }
 
 static bool resolveUpvalue(Compiler * compiler, Token* name, uint32_t* upvalueIndex)
@@ -781,17 +794,18 @@ static bool resolveUpvalue(Compiler * compiler, Token* name, uint32_t* upvalueIn
 	uint32_t localIndex;
 	if (resolveLocal(compiler->enclosing, name, &localIndex))
 	{
-		ASSERT(localIndex < UINT8_COUNT);
+		ASSERT(localIndex < UINT24_COUNT);
+		ASSERT(localIndex < ARY_LEN(compiler->enclosing->locals));
 
 		compiler->enclosing->locals[localIndex].isCaptured = true;
-		*upvalueIndex = addUpvalue(compiler, (uint8_t)localIndex, true);
+		*upvalueIndex = addUpvalue(compiler, localIndex, true);
 		return true;
 	}
 
 	uint32_t upvalueIndexEnclosing;
 	if (resolveUpvalue(compiler->enclosing, name, &upvalueIndexEnclosing))
 	{
-		*upvalueIndex = addUpvalue(compiler, (uint8_t)upvalueIndexEnclosing, false);
+		*upvalueIndex = addUpvalue(compiler, upvalueIndexEnclosing, false);
 		return true;
 	}
 
@@ -800,16 +814,17 @@ static bool resolveUpvalue(Compiler * compiler, Token* name, uint32_t* upvalueIn
 
 static void addLocal(Token name)
 {
-	if (current->localCount == UINT8_COUNT)
+	if (ARY_LEN(current->locals) >= UINT24_COUNT)
 	{
 		error("Too many local variables in function.");
 		return;
 	}
 
-	Local * local = &current->locals[current->localCount++];
-	local->name = name;
-	local->depth = -1;
-	local->isCaptured = false;
+	Local local;
+	local.name = name;
+	local.depth = -1;
+	local.isCaptured = false;
+	ARY_PUSH(current->locals, local);
 }
 
 static void declareVariable(void)
@@ -821,7 +836,7 @@ static void declareVariable(void)
 
 	Token * name = &current->parser->previous;
 
-	for (int i = current->localCount - 1; i >= 0; i--)
+	for (int i = ARY_LEN(current->locals) - 1; i >= 0; i--)
 	{
 		Local * local = &current->locals[i];
 
@@ -854,7 +869,7 @@ static void markInitialized(void)
 	if (current->scopeDepth == 0)
 		return;
 
-	current->locals[current->localCount - 1].depth = current->scopeDepth;
+	ARY_TAIL(current->locals)->depth = current->scopeDepth;
 }
 
 static void defineVariable(uint32_t global)
@@ -865,15 +880,13 @@ static void defineVariable(uint32_t global)
 		return;
 	}
 
-	// TODO: Support OP_DEFINE_GLOBAL_LONG opcode
-
-	if (global >= UINT8_COUNT)
+	if (global >= UINT24_COUNT)
 	{
 		error("Too many global variables defined.");
 		return;
 	}
 
-	emitBytes(OP_DEFINE_GLOBAL, (uint8_t)global);
+	emitConstantHelper(global, OP_DEFINE_GLOBAL, OP_DEFINE_GLOBAL_LONG);
 }
 
 static uint8_t argumentList(void)
@@ -962,11 +975,31 @@ static void function(FunctionType type)
 	uint32_t constant = makeConstant(OBJ_VAL(function));
 	emitConstantHelper(constant, OP_CLOSURE, OP_CLOSURE_LONG);
 
-	for (int i = 0; i < function->upvalueCount; ++i)
+	uint32_t upvalueCount = function->upvalueCount;
+	ASSERT(upvalueCount == ARY_LEN(compiler.upvalues));
+
+	for (uint32_t i = 0; i < upvalueCount; ++i)
 	{
-		emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
-		emitByte(compiler.upvalues[i].index);
+		uint32_t index = compiler.upvalues[i].index;
+		bool longInstruction = (index > UINT8_MAX);
+
+		uint8_t flag = 0;
+		if (compiler.upvalues[i].isLocal) flag |= 0x1;
+		if (longInstruction) flag |= 0x2;
+
+		emitByte(flag);
+
+		if (longInstruction)
+		{
+			emitU24(index);
+		}
+		else
+		{
+			emitByte((uint8_t)index);
+		}
 	}
+
+	destroyCompiler(&compiler);
 }
 
 static void declaration(void)

@@ -25,6 +25,16 @@ void disassembleChunk(Chunk * chunk, const char * name)
 	}
 }
 
+static inline uint32_t readU24(Chunk * chunk, unsigned offset)
+{
+	uint32_t constant = chunk->aryB[offset];
+	constant = constant << 8;
+	constant |= chunk->aryB[offset + 1];
+	constant = constant << 8;
+	constant |= chunk->aryB[offset + 2];
+	return constant;
+}
+
 static unsigned getConstant(Chunk * chunk, bool isLong, unsigned * offsetOut)
 {
 	unsigned constant;
@@ -38,11 +48,7 @@ static unsigned getConstant(Chunk * chunk, bool isLong, unsigned * offsetOut)
 
 		ASSERT(offset + constantBytes <= ARY_LEN(chunk->aryB));
 
-		constant = chunk->aryB[offset];
-		constant = constant << 8;
-		constant |= chunk->aryB[offset + 1];
-		constant = constant << 8;
-		constant |= chunk->aryB[offset + 2];
+		constant = readU24(chunk, offset);
 	}
 	else
 	{
@@ -101,11 +107,12 @@ static unsigned simpleInstruction(const char * name, unsigned offset)
 	return offset + 1;
 }
 
-static unsigned byteInstruction(const char * name, Chunk * chunk, unsigned offset)
+static unsigned immediateInstruction(const char * name, Chunk * chunk, unsigned offset, bool isLong)
 {
-	uint8_t slot = chunk->aryB[offset + 1];
+	offset += 1;
+	uint32_t slot = (isLong) ? readU24(chunk, offset) : chunk->aryB[offset];
 	printf("%-16s %4d\n", name, slot);
-	return offset + 2;
+	return offset + ((isLong) ? 3 : 1);
 }
 
 static unsigned jumpInstruction(const char * name, int sign, Chunk * chunk, int offset)
@@ -149,21 +156,35 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 		case OP_POP:
 			return simpleInstruction("OP_POP", offset);
 		case OP_POPN:
-			return byteInstruction("OP_POPN", chunk, offset);
+			return immediateInstruction("OP_POPN", chunk, offset, false);
 		case OP_GET_LOCAL:
-			return byteInstruction("OP_GET_LOCAL", chunk, offset);
+			return immediateInstruction("OP_GET_LOCAL", chunk, offset, false);
+		case OP_GET_LOCAL_LONG:
+			return immediateInstruction("OP_GET_LOCAL_LONG", chunk, offset, true);
 		case OP_SET_LOCAL:
-			return byteInstruction("OP_SET_LOCAL", chunk, offset);
+			return immediateInstruction("OP_SET_LOCAL", chunk, offset, false);
+		case OP_SET_LOCAL_LONG:
+			return immediateInstruction("OP_SET_LOCAL_LONG", chunk, offset, true);
 		case OP_GET_GLOBAL:
 			return constantInstruction("OP_GET_GLOBAL", chunk, offset, false);
+		case OP_GET_GLOBAL_LONG:
+			return constantInstruction("OP_GET_GLOBAL_LONG", chunk, offset, true);
 		case OP_DEFINE_GLOBAL:
 			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset, false);
+		case OP_DEFINE_GLOBAL_LONG:
+			return constantInstruction("OP_DEFINE_GLOBAL_LONG", chunk, offset, true);
 		case OP_SET_GLOBAL:
 			return constantInstruction("OP_SET_GLOBAL", chunk, offset, false);
+		case OP_SET_GLOBAL_LONG:
+			return constantInstruction("OP_SET_GLOBAL_LONG", chunk, offset, true);
 		case OP_GET_UPVALUE:
-			return byteInstruction("OP_GET_UPVALUE", chunk, offset);
+			return immediateInstruction("OP_GET_UPVALUE", chunk, offset, false);
+		case OP_GET_UPVALUE_LONG:
+			return immediateInstruction("OP_GET_UPVALUE_LONG", chunk, offset, true);
 		case OP_SET_UPVALUE:
-			return byteInstruction("OP_SET_UPVALUE", chunk, offset);
+			return immediateInstruction("OP_SET_UPVALUE", chunk, offset, false);
+		case OP_SET_UPVALUE_LONG:
+			return immediateInstruction("OP_SET_UPVALUE_LONG", chunk, offset, true);
 		case OP_GET_PROPERTY:
 			return constantInstruction("OP_GET_PROPERTY", chunk, offset, false);
 		case OP_GET_PROPERTY_LONG:
@@ -199,7 +220,7 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 		case OP_LOOP:
 			return jumpInstruction("OP_LOOP", -1, chunk, offset);
 		case OP_CALL:
-			return byteInstruction("OP_CALL", chunk, offset);
+			return immediateInstruction("OP_CALL", chunk, offset, false);
 		case OP_CLOSURE:
 			return closureInstruction("OP_CLOSURE", chunk, offset, false);
 		case OP_CLOSURE_LONG:
