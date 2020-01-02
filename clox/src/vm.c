@@ -475,7 +475,10 @@ static InterpretResult run(void)
 			case OP_DEFINE_GLOBAL_LONG:
 			{
 				ObjString * name = READ_STRING(op == OP_DEFINE_GLOBAL);
-				tableSet(&vm.globals, name, peek(0));
+				if (!tableSetIfNew(&vm.globals, name, peek(0)))
+				{
+					RETURN_RUNTIME_ERR("Global named '%s' already exists.", name->aChars);
+				}
 				pop();
 				break;
 			}

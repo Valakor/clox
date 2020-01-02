@@ -93,13 +93,18 @@ static void adjustCapacity(Table * table, int capacity)
 	table->capacity = capacity;
 }
 
-bool tableSet(Table * table, ObjString * key, Value value)
+static inline void resizeForCount(Table * table, int newCount)
 {
-	if (table->count + 1 > table->capacity * TABLE_MAX_LOAD)
+	if (newCount > table->capacity * TABLE_MAX_LOAD)
 	{
 		int capacity = CARY_GROW_CAPACITY(table->capacity);
 		adjustCapacity(table, capacity);
 	}
+}
+
+bool tableSet(Table * table, ObjString * key, Value value)
+{
+	resizeForCount(table, table->count + 1);
 
 	Entry * entry = findEntry(table->aEntries, table->capacity, key);
 
@@ -107,12 +112,52 @@ bool tableSet(Table * table, ObjString * key, Value value)
 	//  (Tombstones are included in the count already)
 
 	bool isNewKey = (entry->key == NULL);
+
 	if (isNewKey && IS_NIL(entry->value)) table->count++;
 
 	entry->key = key;
 	entry->value = value;
 
 	return isNewKey;
+}
+
+bool tableSetIfExists(Table * table, ObjString * key, Value value)
+{
+	resizeForCount(table, table->count + 1);
+
+	Entry * entry = findEntry(table->aEntries, table->capacity, key);
+
+	bool isNewKey = (entry->key == NULL);
+
+	if (isNewKey)
+		return false;
+
+	entry->key = key;
+	entry->value = value;
+
+	return true;
+}
+
+bool tableSetIfNew(Table * table, ObjString * key, Value value)
+{
+	resizeForCount(table, table->count + 1);
+
+	Entry * entry = findEntry(table->aEntries, table->capacity, key);
+
+	// Only increase count if this is a new key and the key is not a tombstone
+	//  (Tombstones are included in the count already)
+
+	bool isNewKey = (entry->key == NULL);
+
+	if (!isNewKey)
+		return false;
+
+	if (IS_NIL(entry->value)) table->count++;
+
+	entry->key = key;
+	entry->value = value;
+
+	return true;
 }
 
 bool tableGet(Table * table, ObjString * key, Value * value)
@@ -145,6 +190,8 @@ bool tableDelete(Table * table, ObjString * key)
 
 void tableAddAll(Table * from, Table * to)
 {
+	resizeForCount(to, to->count + from->count);
+
 	for (int i = 0; i < from->capacity; ++i)
 	{
 		Entry * entry = &from->aEntries[i];
