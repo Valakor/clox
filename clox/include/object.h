@@ -68,6 +68,7 @@ typedef struct ObjClass
 	Obj obj;
 	ObjString * name;
 	Table methods;
+	struct ObjClosure * init; // Not a GC root because also in methods table
 } ObjClass;
 
 typedef struct ObjInstance

@@ -315,10 +315,9 @@ static bool callValue(Value callee, int argCount)
 			{
 				ObjClass* klass = AS_CLASS(callee);
 				vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
-				Value initializer;
-				if (tableGet(&klass->methods, vm.initString, &initializer))
+				if (klass->init)
 				{
-					return call(AS_CLOSURE(initializer), argCount);
+					return call(klass->init, argCount);
 				}
 				else if (argCount != 0)
 				{
@@ -428,6 +427,10 @@ static void defineMethod(ObjString* name)
 	Value method = peek(0);
 	ObjClass* klass = AS_CLASS(peek(1));
 	tableSet(&klass->methods, name, method);
+	if (name == vm.initString)
+	{
+		klass->init = AS_CLOSURE(method);
+	}
 	pop();
 }
 
