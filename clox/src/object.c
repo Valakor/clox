@@ -84,6 +84,7 @@ ObjClass * newClass(ObjString * name)
 {
 	ObjClass * klass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
 	klass->name = name;
+	initTable(&klass->methods);
 	return klass;
 }
 
@@ -109,6 +110,14 @@ ObjClosure * newClosure(ObjFunction * function)
 	closure->upvalues = upvalues;
 	closure->upvalueCount = function->upvalueCount;
 	return closure;
+}
+
+ObjBoundMethod* newBoundMethod(Value receiver, ObjClosure* method)
+{
+	ObjBoundMethod * boundMethod = ALLOCATE_OBJ(ObjBoundMethod, OBJ_BOUND_METHOD);
+	boundMethod->receiver = receiver;
+	boundMethod->method = method;
+	return boundMethod;
 }
 
 ObjNative * newNative(NativeFn function)
@@ -170,6 +179,18 @@ ObjString * takeString(const char * chars, int length)
 	return allocateString(chars, length, hash);
 }
 
+static void printFunction(ObjFunction* function)
+{
+	if (function->name == NULL)
+	{
+		printf("<script>");
+	}
+	else
+	{
+		printf("<fn %s>", function->name->aChars);
+	}
+}
+
 void printObject(Value value)
 {
 	switch (OBJ_TYPE(value))
@@ -179,14 +200,7 @@ void printObject(Value value)
 			break;
 
 		case OBJ_FUNCTION:
-			if (AS_FUNCTION(value)->name == NULL)
-			{
-				printf("<script>");
-			}
-			else
-			{
-				printf("<fn %s>", AS_FUNCTION(value)->name->aChars);
-			}
+			printFunction(AS_FUNCTION(value));
 			break;
 
 		case OBJ_CLASS:
@@ -199,14 +213,11 @@ void printObject(Value value)
 			break;
 
 		case OBJ_CLOSURE:
-			if (AS_CLOSURE(value)->function->name == NULL)
-			{
-				printf("<script>");
-			}
-			else
-			{
-				printf("<fn %s>", AS_CLOSURE(value)->function->name->aChars);
-			}
+			printFunction(AS_CLOSURE(value)->function);
+			break;
+
+		case OBJ_BOUND_METHOD:
+			printFunction(AS_BOUND_METHOD(value)->method->function);
 			break;
 
 		case OBJ_NATIVE:

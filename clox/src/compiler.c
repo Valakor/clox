@@ -67,6 +67,8 @@ typedef struct Upvalue
 typedef enum FunctionType
 {
 	TYPE_FUNCTION,
+	TYPE_INITIALIZER,
+	TYPE_METHOD,
 	TYPE_SCRIPT,
 } FunctionType;
 
@@ -86,8 +88,14 @@ typedef struct Compiler
 	int scopeDepth;
 } Compiler;
 
-Compiler * current = NULL;
+typedef struct ClassCompiler
+{
+	struct ClassCompiler * enclosing;
+	Token name;
+} ClassCompiler;
 
+Compiler * current = NULL;
+ClassCompiler * currentClass = NULL;
 
 
 static void advance(void);
@@ -306,7 +314,15 @@ static uint32_t emitJump(uint8_t instruction)
 
 static void emitReturn(void)
 {
-	emitByte(OP_NIL);
+	if (current->type == TYPE_INITIALIZER)
+	{
+		emitBytes(OP_GET_LOCAL, 0);
+	}
+	else
+	{
+		emitByte(OP_NIL);
+	}
+
 	emitByte(OP_RETURN);
 }
 
@@ -388,8 +404,18 @@ static void initCompiler(Compiler * compiler, Scanner * scanner, Parser * parser
 	Local local;
 	local.depth = 0;
 	local.isCaptured = false;
-	local.name.start = "";
-	local.name.length = 0;
+
+	if (type != TYPE_FUNCTION)
+	{
+		local.name.start = "this";
+		local.name.length = 4;
+	}
+	else
+	{
+		local.name.start = "";
+		local.name.length = 0;
+	}
+
 	ARY_PUSH(current->locals, local);
 }
 
@@ -516,6 +542,12 @@ static void dot(bool canAssign)
 	{
 		expression();
 		emitConstantHelper(name, OP_SET_PROPERTY, OP_SET_PROPERTY_LONG);
+	}
+	else if (match(TOKEN_LEFT_PAREN))
+	{
+		uint8_t argCount = argumentList();
+		emitConstantHelper(name, OP_INVOKE, OP_INVOKE_LONG);
+		emitByte(argCount);
 	}
 	else
 	{
@@ -653,6 +685,19 @@ static void unary(bool canAssign)
 	}
 }
 
+static void this_(bool canAssign)
+{
+	UNUSED(canAssign);
+
+	if (currentClass == NULL)
+	{
+		error("Cannot use 'this' outside of a class.");
+		return;
+	}
+
+	variable(false);
+}
+
 static const ParseRule rules[] =
 {
 	{ grouping, call,    PREC_CALL },       // TOKEN_LEFT_PAREN
@@ -689,7 +734,7 @@ static const ParseRule rules[] =
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_PRINT
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_RETURN
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_SUPER
-	{ NULL,     NULL,    PREC_NONE },       // TOKEN_THIS
+	{ this_,    NULL,    PREC_NONE },       // TOKEN_THIS
 	{ literal,  NULL,    PREC_NONE },       // TOKEN_TRUE
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_VAR
 	{ NULL,     NULL,    PREC_NONE },       // TOKEN_WHILE
@@ -1002,6 +1047,24 @@ static void function(FunctionType type)
 	destroyCompiler(&compiler);
 }
 
+static void method(void)
+{
+	consume(TOKEN_IDENTIFIER, "Expect method name.");
+
+	uint32_t constant = identifierConstant(&current->parser->previous);
+
+	FunctionType type = TYPE_METHOD;
+
+	if (current->parser->previous.length == 4 && memcmp(current->parser->previous.start, "init", 4) == 0)
+	{
+		type = TYPE_INITIALIZER;
+	}
+
+	function(type);
+
+	emitConstantHelper(constant, OP_METHOD, OP_METHOD_LONG);
+}
+
 static void declaration(void)
 {
 	if (match(TOKEN_CLASS))
@@ -1030,14 +1093,32 @@ static void declaration(void)
 static void classDeclaration(void)
 {
 	consume(TOKEN_IDENTIFIER, "Expect class name.");
+	Token className = current->parser->previous;
 	uint32_t nameConstant = identifierConstant(&current->parser->previous);
 	declareVariable();
 
 	emitConstantHelper(nameConstant, OP_CLASS, OP_CLASS_LONG);
 	defineVariable(nameConstant);
 
+	ClassCompiler classCompiler;
+	classCompiler.name = className;
+	classCompiler.enclosing = currentClass;
+	currentClass = &classCompiler;
+
+	namedVariable(className, false);
+
 	consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+
+	while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
+	{
+		method();
+	}
+
 	consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+
+	emitByte(OP_POP);
+
+	currentClass = currentClass->enclosing;
 }
 
 static void funDeclaration(void)
@@ -1120,6 +1201,11 @@ static void returnStatement(void)
 	}
 	else
 	{
+		if (current->type == TYPE_INITIALIZER)
+		{
+			error("Cannot return a value from an initializer.");
+		}
+
 		expression();
 		consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
 		emitByte(OP_RETURN);
