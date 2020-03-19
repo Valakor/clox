@@ -23,6 +23,7 @@ typedef enum ObjType
 	OBJ_CLASS,
 	OBJ_INSTANCE,
 	OBJ_CLOSURE,
+	OBJ_BOUND_METHOD,
 	OBJ_NATIVE,
 } ObjType;
 
@@ -66,6 +67,8 @@ typedef struct ObjClass
 {
 	Obj obj;
 	ObjString * name;
+	Table methods;
+	struct ObjClosure * init; // Not a GC root because also in methods table
 } ObjClass;
 
 typedef struct ObjInstance
@@ -82,6 +85,13 @@ typedef struct ObjClosure
 	ObjUpvalue ** upvalues;
 	int upvalueCount;
 } ObjClosure;
+
+typedef struct ObjBoundMethod
+{
+	Obj obj;
+	Value receiver;
+	ObjClosure* method;
+} ObjBoundMethod;
 
 typedef bool (*NativeFn)(int argCount, Value * args);
 
@@ -135,6 +145,7 @@ extern ObjFunction * newFunction(void);
 extern ObjClass * newClass(ObjString * name);
 extern ObjInstance * newInstance(ObjClass * klass);
 extern ObjClosure * newClosure(ObjFunction * function);
+extern ObjBoundMethod * newBoundMethod(Value receiver, ObjClosure* method);
 extern ObjNative * newNative(NativeFn function);
 
 extern ObjString * concatStrings(const ObjString * pStrA, const ObjString * pStrB);
@@ -148,21 +159,23 @@ static inline bool isObjType(Value value, ObjType type)
 	return IS_OBJ(value) && getObjType(AS_OBJ(value)) == type;
 }
 
-#define OBJ_TYPE(value)		(getObjType(AS_OBJ(value)))
+#define OBJ_TYPE(value)			(getObjType(AS_OBJ(value)))
 
-#define IS_UPVALUE(value)	isObjType(value, OBJ_UPVALUE)
-#define IS_FUNCTION(value)	isObjType(value, OBJ_FUNCTION)
-#define IS_CLASS(value)		isObjType(value, OBJ_CLASS)
-#define IS_INSTANCE(value)	isObjType(value, OBJ_INSTANCE)
-#define IS_CLOSURE(value)	isObjType(value, OBJ_CLOSURE)
-#define IS_NATIVE(value)	isObjType(value, OBJ_NATIVE)
-#define IS_STRING(value)	isObjType(value, OBJ_STRING)
+#define IS_UPVALUE(value)		isObjType(value, OBJ_UPVALUE)
+#define IS_FUNCTION(value)		isObjType(value, OBJ_FUNCTION)
+#define IS_CLASS(value)			isObjType(value, OBJ_CLASS)
+#define IS_INSTANCE(value)		isObjType(value, OBJ_INSTANCE)
+#define IS_CLOSURE(value)		isObjType(value, OBJ_CLOSURE)
+#define IS_BOUND_METHOD(value)	isObjType(value, OBJ_BOUND_METHOD)
+#define IS_NATIVE(value)		isObjType(value, OBJ_NATIVE)
+#define IS_STRING(value)		isObjType(value, OBJ_STRING)
 
-#define AS_UPVALUE(value)	((ObjUpvalue*)AS_OBJ(value))
-#define AS_FUNCTION(value)	((ObjFunction*)AS_OBJ(value))
-#define AS_CLASS(value)		((ObjClass*)AS_OBJ(value))
-#define AS_INSTANCE(value)	((ObjInstance*)AS_OBJ(value))
-#define AS_CLOSURE(value)	((ObjClosure*)AS_OBJ(value))
-#define AS_NATIVE(value)	(((ObjNative*)AS_OBJ(value))->function)
-#define AS_STRING(value)	((ObjString*)AS_OBJ(value))
-#define AS_CSTRING(value)	(((ObjString*)AS_OBJ(value))->aChars)
+#define AS_UPVALUE(value)		((ObjUpvalue*)AS_OBJ(value))
+#define AS_FUNCTION(value)		((ObjFunction*)AS_OBJ(value))
+#define AS_CLASS(value)			((ObjClass*)AS_OBJ(value))
+#define AS_INSTANCE(value)		((ObjInstance*)AS_OBJ(value))
+#define AS_CLOSURE(value)		((ObjClosure*)AS_OBJ(value))
+#define AS_BOUND_METHOD(value)	((ObjBoundMethod*)AS_OBJ(value))
+#define AS_NATIVE(value)		(((ObjNative*)AS_OBJ(value))->function)
+#define AS_STRING(value)		((ObjString*)AS_OBJ(value))
+#define AS_CSTRING(value)		(((ObjString*)AS_OBJ(value))->aChars)

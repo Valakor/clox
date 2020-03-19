@@ -79,6 +79,20 @@ static unsigned constantInstruction(const char * name, Chunk * chunk, unsigned o
 	return offset;
 }
 
+static unsigned invokeInstruction(const char * name, Chunk * chunk, unsigned offset, bool isLong)
+{
+	offset += 1;
+
+	unsigned constant = getConstant(chunk, isLong, &offset);
+	uint8_t argCount = chunk->aryB[offset++];
+
+	printf("%-16s %4d '", name, constant);
+	printValue(chunk->aryValConstants[constant]);
+	printf("' (%d args)\n", argCount);
+
+	return offset;
+}
+
 static unsigned closureInstruction(const char * name, Chunk * chunk, unsigned offset, bool isLong)
 {
 	offset += 1;
@@ -221,6 +235,10 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return jumpInstruction("OP_LOOP", -1, chunk, offset);
 		case OP_CALL:
 			return immediateInstruction("OP_CALL", chunk, offset, false);
+		case OP_INVOKE:
+			return invokeInstruction("OP_INVOKE", chunk, offset, false);
+		case OP_INVOKE_LONG:
+			return invokeInstruction("OP_INVOKE_LONG", chunk, offset, true);
 		case OP_CLOSURE:
 			return closureInstruction("OP_CLOSURE", chunk, offset, false);
 		case OP_CLOSURE_LONG:
@@ -233,6 +251,10 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return constantInstruction("OP_CLASS", chunk, offset, false);
 		case OP_CLASS_LONG:
 			return constantInstruction("OP_CLASS_LONG", chunk, offset, true);
+		case OP_METHOD:
+			return constantInstruction("OP_METHOD", chunk, offset, false);
+		case OP_METHOD_LONG:
+			return constantInstruction("OP_METHOD_LONG", chunk, offset, true);
 		default:
 			printf("Unknown opcode %d\n", instruction);
 			return offset + 1;
