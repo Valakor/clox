@@ -207,6 +207,10 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return constantInstruction("OP_SET_PROPERTY", chunk, offset, false);
 		case OP_SET_PROPERTY_LONG:
 			return constantInstruction("OP_SET_PROPERTY_LONG", chunk, offset, true);
+		case OP_GET_SUPER:
+			return constantInstruction("OP_GET_SUPER", chunk, offset, false);
+		case OP_GET_SUPER_LONG:
+			return constantInstruction("OP_GET_SUPER_LONG", chunk, offset, true);
 		case OP_EQUAL:
 			return simpleInstruction("OP_EQUAL", offset);
 		case OP_GREATER:
@@ -239,6 +243,10 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return invokeInstruction("OP_INVOKE", chunk, offset, false);
 		case OP_INVOKE_LONG:
 			return invokeInstruction("OP_INVOKE_LONG", chunk, offset, true);
+		case OP_SUPER_INVOKE:
+			return invokeInstruction("OP_SUPER_INVOKE", chunk, offset, false);
+		case OP_SUPER_INVOKE_LONG:
+			return invokeInstruction("OP_SUPER_INVOKE_LONG", chunk, offset, true);
 		case OP_CLOSURE:
 			return closureInstruction("OP_CLOSURE", chunk, offset, false);
 		case OP_CLOSURE_LONG:
@@ -251,6 +259,8 @@ unsigned disassembleInstruction(Chunk * chunk, unsigned offset)
 			return constantInstruction("OP_CLASS", chunk, offset, false);
 		case OP_CLASS_LONG:
 			return constantInstruction("OP_CLASS_LONG", chunk, offset, true);
+		case OP_INHERIT:
+			return simpleInstruction("OP_INHERIT", offset);
 		case OP_METHOD:
 			return constantInstruction("OP_METHOD", chunk, offset, false);
 		case OP_METHOD_LONG:

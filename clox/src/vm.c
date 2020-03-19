@@ -649,6 +649,18 @@ static InterpretResult run(void)
 				break;
 			}
 
+			case OP_GET_SUPER:
+			case OP_GET_SUPER_LONG:
+			{
+				ObjString* name = READ_STRING(op == OP_GET_SUPER);
+				ObjClass* superclass = AS_CLASS(pop());
+				if (!bindMethod(superclass, name))
+				{
+					RETURN_RUNTIME_ERR("Undefined method on '%s' superclass.", name->aChars);
+				}
+				break;
+			}
+
 			case OP_EQUAL:
 			{
 				Value b = pop();
@@ -750,6 +762,23 @@ static InterpretResult run(void)
 				break;
 			}
 
+			case OP_SUPER_INVOKE:
+			case OP_SUPER_INVOKE_LONG:
+			{
+				ObjString* method = READ_STRING(op == OP_SUPER_INVOKE);
+				int argCount = READ_BYTE();
+				ObjClass * superclass = AS_CLASS(pop());
+				frame->ip = ip;
+
+				if (!invokeFromClass(superclass, method, argCount))
+					return INTERPRET_RUNTIME_ERROR;
+
+				frame = &vm.frames[vm.frameCount - 1];
+				ip = frame->ip;
+
+				break;
+			}
+
 			case OP_CLOSURE:
 			case OP_CLOSURE_LONG:
 			{
@@ -804,6 +833,20 @@ static InterpretResult run(void)
 			case OP_CLASS_LONG:
 				push(OBJ_VAL(newClass(READ_STRING(op == OP_CLASS))));
 				break;
+
+			case OP_INHERIT:
+			{
+				Value superclass = peek(1);
+				if (!IS_CLASS(superclass))
+				{
+					RETURN_RUNTIME_ERR("Superclass must be a class.");
+				}
+
+				ObjClass* subclass = AS_CLASS(peek(0));
+				tableAddAll(&AS_CLASS(superclass)->methods, &subclass->methods);
+				pop();
+				break;
+			}
 
 			case OP_METHOD:
 			case OP_METHOD_LONG:
