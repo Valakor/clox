@@ -305,6 +305,7 @@ static bool callValue(Value callee, int argCount)
 				}
 				else
 				{
+					// BB (matthewp) Relax this restriction
 					ASSERT(IS_STRING(vm.stackTop[-argCount - 1]));
 					runtimeError(AS_CSTRING(vm.stackTop[-argCount - 1]));
 					return false;

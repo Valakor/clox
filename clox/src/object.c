@@ -192,12 +192,18 @@ static void printFunction(ObjFunction* function)
 	}
 }
 
+static void printInstance(ObjInstance* inst)
+{
+	// TODO: Call (optional) user-supplied toString() method
+	printf("<%s instance>", inst->klass->name->aChars);
+}
+
 void printObject(Value value)
 {
 	switch (OBJ_TYPE(value))
 	{
 		case OBJ_UPVALUE:
-			printf("upvalue");
+			printf("<upvalue>");
 			break;
 
 		case OBJ_FUNCTION:
@@ -205,12 +211,11 @@ void printObject(Value value)
 			break;
 
 		case OBJ_CLASS:
-			printf("%s", AS_CLASS(value)->name->aChars);
+			printf("<%s>", AS_CLASS(value)->name->aChars);
 			break;
 
 		case OBJ_INSTANCE:
-			// TODO: Call (optional) user-supplied toString() method
-			printf("%s instance", AS_INSTANCE(value)->klass->name->aChars);
+			printInstance(AS_INSTANCE(value));
 			break;
 
 		case OBJ_CLOSURE:
@@ -222,7 +227,7 @@ void printObject(Value value)
 			break;
 
 		case OBJ_NATIVE:
-			printf("<native fn>");
+			printf("<native fn 0x%p>", AS_NATIVE(value));
 			break;
 
 		case OBJ_STRING:
