@@ -20,15 +20,17 @@ static void PrintErr(const char * format, ...) PRINTF_LIKE(1, 2);
 
 
 
-#define STACK_CAPTURE_DEPTH 4
+#define STACK_CAPTURE_DEPTH 6
 #define STACK_CAPTURE_SKIP_DEPTH 2
 
 #if TARGET_WINDOWS
 #include <Windows.h>
 #include <DbgHelp.h>
 
-static void PrintStack()
+static void PrintStack(void)
 {
+	// BB (matthewp) This function is not thread-safe, except for CaptureStackBackTrace()
+
 	// See: http://blog.aaronballman.com/2011/04/generating-a-stack-crawl/
 
 	HANDLE process = GetCurrentProcess();
@@ -37,8 +39,18 @@ static void PrintStack()
 	// executable's PDB files. We also want to undecorate the symbol names we're returned.
 	// If you want, you can add other symbol servers or paths via a semi-colon separated list
 	// in SymInitialized.
-	SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_INCLUDE_32BIT_MODULES | SYMOPT_UNDNAME);
-	if (!SymInitialize(process, NULL, TRUE))
+
+	static bool fInit = false;
+	static bool fInitSuccess = false;
+
+	if (!fInit)
+	{
+		SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_INCLUDE_32BIT_MODULES);
+		fInitSuccess = SymInitialize(process, NULL, TRUE);
+		fInit = true;
+	}
+
+	if (!fInitSuccess)
 		return;
 
 	// Capture up to STACK_CAPTURE_DEPTH stack frames from the current call stack. We're
@@ -51,33 +63,49 @@ static void PrintStack()
 		// Allocate a buffer large enough to hold the symbol information on the stack and get 
 		// a pointer to the buffer. We also have to set the size of the symbol structure itself
 		// and the number of bytes reserved for the name.
-		char buffer[sizeof(SYMBOL_INFO) + 1024 * sizeof(TCHAR)] = { 0 };
+		char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(CHAR)] = { 0 };
 
 		PSYMBOL_INFO pSymbol = (PSYMBOL_INFO)buffer;
 		pSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
-		pSymbol->MaxNameLen = 1024;
+		pSymbol->MaxNameLen = MAX_SYM_NAME;
 
 		// Attempt to get information about the symbol and add it to our output parameter.
 		DWORD64 displacement = 0;
 		if (!SymFromAddr(process, (DWORD64)addrs[i], &displacement, pSymbol))
 			continue;
 
+		char symbolNameUnDecorated[MAX_SYM_NAME] = { 0 };
+		const char* symbolName = pSymbol->Name;
+		if (symbolName[0] == '?' && UnDecorateSymbolName(symbolName, symbolNameUnDecorated, MAX_SYM_NAME, UNDNAME_COMPLETE | UNDNAME_32_BIT_DECODE) != 0)
+		{
+			// Undecorate C++ symbols (which always start with a ?)
+
+			symbolName = symbolNameUnDecorated;
+		}
+
 		IMAGEHLP_MODULE64 module = { 0 };
 		module.SizeOfStruct = sizeof(IMAGEHLP_MODULE64);
 
 		SymGetModuleInfo64(process, (DWORD64)addrs[i], &module);
 
-		PrintErr("%-3d %-35s 0x%p %s + %lld\n", i, module.ModuleName, addrs[i], pSymbol->Name, displacement);
-	}
+		const char* moduleName = module.ModuleName;
+		const char* imageName = strrchr(module.ImageName, '\\');
+		if (imageName)
+		{
+			moduleName = imageName + 1;
+		}
 
-	SymCleanup(process);
+		PrintErr("%-3d %-35s 0x%p %s + %lld\n", i, moduleName, addrs[i], symbolName, displacement);
+	}
 }
 
 #else
 #include <execinfo.h>
 
-static void PrintStack()
+static void PrintStack(void)
 {
+	// BB (matthewp) Not safe to call from a signal handler because backtrace_symbols calls malloc()
+
 	void * callstack[STACK_CAPTURE_DEPTH + STACK_CAPTURE_SKIP_DEPTH];
 
 	int frames = backtrace(callstack, STACK_CAPTURE_DEPTH + STACK_CAPTURE_SKIP_DEPTH);
