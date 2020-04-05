@@ -20,77 +20,85 @@ typedef enum ValueType
 	VAL_OBJ,
 } ValueType;
 
-#ifndef USE_SMALL_VALUE
-#	define USE_SMALL_VALUE 1
-#endif // USE_SMALL_VALUE
+#ifndef VALUES_USE_NAN_BOXING
+#	define VALUES_USE_NAN_BOXING 1
+#endif // VALUES_USE_NAN_BOXING
 
-#if USE_SMALL_VALUE
+#if VALUES_USE_NAN_BOXING
 
-typedef double Value;
+typedef uint64_t Value;
 
-CASSERT(sizeof(Value) == sizeof(void *));
-
-#define _VALUE_TYPE_MASK	0x7ffc000000000000ull
-#define _VALUE_PTR_MASK		0x0000ffffffffffffull
-
-#define _VAL_BOOL			0x7ffc000000000000ull
-#define _VAL_FALSE			0x7ffc000000000000ull
-#define _VAL_TRUE			0x7ffc000000000001ull
-#define _VAL_NIL			0x7ffd000000000000ull
-#define _VAL_OBJ			0x7fff000000000000ull
-
-#define _VAL_MASK			0x7fff000000000000ull
-
-inline static uint64_t valueCastToUn(Value value)
+typedef union DoubleUnion
 {
-	return *(uint64_t*)(&value);
+	uint64_t n;
+	double d;
+} DoubleUnion;
+
+CASSERT(sizeof(uint64_t) == sizeof(double));
+CASSERT(sizeof(Value) == sizeof(uint64_t));
+
+#define _VAL_QNAN			0x7ffc000000000000ull
+#define _VAL_SIGN_BIT		0x8000000000000000ull
+
+#define _VAL_NIL			1u
+#define _VAL_FALSE			2u
+#define _VAL_TRUE			3u
+
+#define _VAL_PTR_MASK		(_VAL_QNAN | _VAL_SIGN_BIT)
+
+inline static double _ValueCastToNum(Value value)
+{
+	DoubleUnion u;
+	u.n = value;
+	return u.d;
 }
 
-inline static Value valueCastToValue(uint64_t d)
+inline static Value _NumCastToValue(double num)
 {
-	return *(Value*)(&d);
+	DoubleUnion u;
+	u.d = num;
+	return u.n;
 }
 
-inline static ValueType valueType(Value value)
-{
-	uint64_t d = valueCastToUn(value);
+#define VAL_TYPE(value)		(_ValueType(value))
 
-	if ((d & _VALUE_TYPE_MASK) == _VALUE_TYPE_MASK)
+#define NIL_VAL				(Value)(_VAL_QNAN | _VAL_NIL)
+#define FALSE_VAL			(Value)(_VAL_QNAN | _VAL_FALSE)
+#define TRUE_VAL			(Value)(_VAL_QNAN | _VAL_TRUE)
+#define BOOL_VAL(value)		((value) ? TRUE_VAL : FALSE_VAL)
+#define NUMBER_VAL(value)	_NumCastToValue(value)
+#define OBJ_VAL(object)		(Value)(_VAL_SIGN_BIT | _VAL_QNAN | (uint64_t)(uintptr_t)(object))
+
+#define IS_BOOL(value)		(((value) & FALSE_VAL) == FALSE_VAL)
+#define IS_NIL(value)		((value) == NIL_VAL)
+#define IS_NUMBER(value)	(((value) & _VAL_QNAN) != _VAL_QNAN)
+#define IS_OBJ(value)		(((value) & _VAL_PTR_MASK) == _VAL_PTR_MASK)
+
+#define AS_BOOL(value)		((value) == TRUE_VAL)
+#define AS_NUMBER(value)	_ValueCastToNum(value)
+#define AS_OBJ(value)		((Obj*)(uintptr_t)((value) & ~_VAL_PTR_MASK))
+
+inline static ValueType _ValueType(Value value)
+{
+	if (IS_NUMBER(value))
 	{
-		// Something that's not a number
-
-		const unsigned long long mask = 0x3ull;
-		const unsigned long long shift = 0x30ull;
-
-		unsigned long long n = ((d >> shift) & mask);
-
-		return (ValueType)n;
+		return VAL_NUMBER;
+	}
+	else if (IS_OBJ(value))
+	{
+		return VAL_OBJ;
+	}
+	else if (IS_BOOL(value))
+	{
+		return VAL_BOOL;
 	}
 	else
 	{
-		// A number
-
-		return VAL_NUMBER;
+		return VAL_NIL;
 	}
 }
 
-#define VAL_TYPE(value)		(valueType(value))
-
-#define IS_BOOL(value)		((valueCastToUn(value) & ~0x1ull) == _VAL_BOOL)
-#define IS_NIL(value)		(valueCastToUn(value) == _VAL_NIL)
-#define IS_NUMBER(value)	((valueCastToUn(value) & _VALUE_TYPE_MASK) != _VALUE_TYPE_MASK)
-#define IS_OBJ(value)		((valueCastToUn(value) & ~_VALUE_PTR_MASK) == _VAL_OBJ)
-
-#define AS_BOOL(value)		((bool)(valueCastToUn(value) & 0x1))
-#define AS_NUMBER(value)	((value))
-#define AS_OBJ(value)		((Obj*)(valueCastToUn(value) & _VALUE_PTR_MASK))
-
-#define BOOL_VAL(value)		valueCastToValue((value) ? _VAL_TRUE : _VAL_FALSE)
-#define NIL_VAL				valueCastToValue(_VAL_NIL)
-#define NUMBER_VAL(value)	((Value) (value))
-#define OBJ_VAL(object)		valueCastToValue(_VAL_OBJ | (uint64_t)(void*)(object))
-
-#else
+#else // !VALUES_USE_NAN_BOXING
 
 typedef struct
 {
@@ -117,11 +125,13 @@ CASSERT(sizeof(Value) == 2 * sizeof(void *));
 #define AS_OBJ(value)		((value).as.obj)
 
 #define BOOL_VAL(value)		((Value){ VAL_BOOL, { .boolean = value } })
+#define FALSE_VAL			((Value){ VAL_BOOL, { .boolean = false } })
+#define TRUE_VAL			((Value){ VAL_BOOL, { .boolean = true } })
 #define NIL_VAL				((Value){ VAL_NIL, { .number = 0 } })
 #define NUMBER_VAL(value)	((Value){ VAL_NUMBER, { .number = value } })
 #define OBJ_VAL(object)		((Value){ VAL_OBJ, { .obj = &object->obj } })
 
-#endif
+#endif // !VALUES_USE_NAN_BOXING
 
 bool valuesEqual(Value a, Value b);
 void printValue(Value value);

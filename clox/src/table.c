@@ -20,18 +20,21 @@
 
 void initTable(Table * table)
 {
-	CLEAR_STRUCT(*table);
+	table->count = 0;
+	table->capacityMask = -1;
+	table->aEntries = NULL;
 }
 
 void freeTable(Table * table)
 {
-	CARY_FREE(Entry, table->aEntries, table->capacity);
+	ASSERT(IS_POW2(table->capacityMask + 1));
+	CARY_FREE(Entry, table->aEntries, table->capacityMask + 1);
 	initTable(table);
 }
 
-static Entry * findEntry(Entry * aEntries, int capacity, ObjString * key)
+static Entry * findEntry(Entry * aEntries, int capacityMask, ObjString * key)
 {
-	uint32_t index = key->hash % capacity;
+	uint32_t index = key->hash & capacityMask;
 	Entry * tombstone = NULL;
 
 	for (;;)
@@ -58,17 +61,19 @@ static Entry * findEntry(Entry * aEntries, int capacity, ObjString * key)
 			return entry;
 		}
 
-		index = (index + 1) % capacity;
+		index = (index + 1) & capacityMask;
 	}
 
 	// Unreachable
 }
 
-static void adjustCapacity(Table * table, int capacity)
+static void adjustCapacity(Table * table, int capacityMask)
 {
-	Entry * aEntries = CARY_ALLOCATE(Entry, capacity);
+	ASSERT(IS_POW2(capacityMask + 1));
 
-	for (int i = 0; i < capacity; ++i)
+	Entry * aEntries = CARY_ALLOCATE(Entry, capacityMask + 1);
+
+	for (int i = 0; i <= capacityMask; ++i)
 	{
 		aEntries[i].key = NULL;
 		aEntries[i].value = NIL_VAL;
@@ -76,29 +81,38 @@ static void adjustCapacity(Table * table, int capacity)
 
 	table->count = 0;
 
-	for (int i = 0; i < table->capacity; ++i)
+	for (int i = 0; i <= table->capacityMask; ++i)
 	{
 		Entry * entry = &table->aEntries[i];
 		if (entry->key == NULL) continue;
 
-		Entry * dest = findEntry(aEntries, capacity, entry->key);
+		Entry * dest = findEntry(aEntries, capacityMask, entry->key);
 		dest->key = entry->key;
 		dest->value = entry->value;
 		table->count++;
 	}
 
-	CARY_FREE(Entry, table->aEntries, table->capacity);
+	int oldCapacity = table->capacityMask + 1;
+	ASSERT(oldCapacity == 0 || IS_POW2(oldCapacity));
+	CARY_FREE(Entry, table->aEntries, oldCapacity);
 
 	table->aEntries = aEntries;
-	table->capacity = capacity;
+	table->capacityMask = capacityMask;
 }
 
 static inline void resizeForCount(Table * table, int newCount)
 {
-	if (newCount > table->capacity * TABLE_MAX_LOAD)
+	int oldCapacity = table->capacityMask + 1;
+
+	if (newCount > oldCapacity * TABLE_MAX_LOAD)
 	{
-		int capacity = CARY_GROW_CAPACITY(table->capacity);
-		adjustCapacity(table, capacity);
+		// NOTE (matthewp) We rely on the behavior of CARY_GROW_CAPACITY giving us power-of-two sized
+		//  capacities to avoid using the modulus operator in findEntry
+
+		ASSERT(oldCapacity == 0 || IS_POW2(oldCapacity));
+		int capacity = CARY_GROW_CAPACITY(oldCapacity);
+		ASSERT(IS_POW2(capacity));
+		adjustCapacity(table, capacity - 1);
 	}
 }
 
@@ -106,7 +120,7 @@ bool tableSet(Table * table, ObjString * key, Value value)
 {
 	resizeForCount(table, table->count + 1);
 
-	Entry * entry = findEntry(table->aEntries, table->capacity, key);
+	Entry * entry = findEntry(table->aEntries, table->capacityMask, key);
 
 	// Only increase count if this is a new key and the key is not a tombstone
 	//  (Tombstones are included in the count already)
@@ -125,7 +139,7 @@ bool tableSetIfExists(Table * table, ObjString * key, Value value)
 {
 	resizeForCount(table, table->count + 1);
 
-	Entry * entry = findEntry(table->aEntries, table->capacity, key);
+	Entry * entry = findEntry(table->aEntries, table->capacityMask, key);
 
 	bool isNewKey = (entry->key == NULL);
 
@@ -142,7 +156,7 @@ bool tableSetIfNew(Table * table, ObjString * key, Value value)
 {
 	resizeForCount(table, table->count + 1);
 
-	Entry * entry = findEntry(table->aEntries, table->capacity, key);
+	Entry * entry = findEntry(table->aEntries, table->capacityMask, key);
 
 	// Only increase count if this is a new key and the key is not a tombstone
 	//  (Tombstones are included in the count already)
@@ -164,7 +178,7 @@ bool tableGet(Table * table, ObjString * key, Value * value)
 {
 	if (table->aEntries == NULL) return false;
 
-	Entry * entry = findEntry(table->aEntries, table->capacity, key);
+	Entry * entry = findEntry(table->aEntries, table->capacityMask, key);
 	if (entry->key == NULL) return false;
 
 	*value = entry->value;
@@ -177,7 +191,7 @@ bool tableDelete(Table * table, ObjString * key)
 
 	// Find the entry.
 
-	Entry * entry = findEntry(table->aEntries, table->capacity, key);
+	Entry * entry = findEntry(table->aEntries, table->capacityMask, key);
 	if (entry->key == NULL) return false;
 
 	// Place a tombstone in the entry
@@ -192,9 +206,10 @@ void tableAddAll(Table * from, Table * to)
 {
 	resizeForCount(to, to->count + from->count);
 
-	for (int i = 0; i < from->capacity; ++i)
+	for (int i = 0; i <= from->capacityMask; ++i)
 	{
 		Entry * entry = &from->aEntries[i];
+
 		if (entry->key != NULL)
 		{
 			tableSet(to, entry->key, entry->value);
@@ -210,7 +225,7 @@ ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_
 
 	// Figure out where to insert in the table. Use open addressing and basic linear probing
 
-	uint32_t index = hash % table->capacity;
+	uint32_t index = hash & table->capacityMask;
 
 	for (;;)
 	{
@@ -236,7 +251,7 @@ ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_
 
 		// Try the next slot
 
-		index = (index + 1) % table->capacity;
+		index = (index + 1) & table->capacityMask;
 	}
 
 	// Unreachable
@@ -244,7 +259,7 @@ ObjString * tableFindString(Table * table, const char * aCh, int length, uint32_
 
 void markTable(Table* table)
 {
-	for (int i = 0; i < table->capacity; i++)
+	for (int i = 0; i <= table->capacityMask; i++)
 	{
 		Entry* entry = &table->aEntries[i];
 		markObject((Obj*)entry->key);
@@ -254,7 +269,7 @@ void markTable(Table* table)
 
 void tableRemoveWhite(Table* table)
 {
-	for (int i = 0; i < table->capacity; i++)
+	for (int i = 0; i <= table->capacityMask; i++)
 	{
 		Entry* entry = &table->aEntries[i];
 

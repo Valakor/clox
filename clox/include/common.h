@@ -42,7 +42,7 @@
 	void DoAssert(const char * file, int line, const char * function, const char * format, ...) PRINTF_LIKE(4, 5);
 
 	#define ASSERT_MACRO(f, format, ...) \
-		(void)(LIKELY(f) || (DoAssert(__FILE__, __LINE__, FUNCTION_PRETTY, format, ##__VA_ARGS__), DEBUG_BREAK(), 0))
+		(void)(LIKELY(!!(f)) || (DoAssert(__FILE__, __LINE__, FUNCTION_PRETTY, format, ##__VA_ARGS__), DEBUG_BREAK(), 0))
 
 	#define ASSERT(f) ASSERT_MACRO(f, #f)
 	#define ASSERTMSG(f, format, ...) ASSERT_MACRO(f, format, ##__VA_ARGS__)
@@ -84,3 +84,5 @@
 
 #define UINT24_MAX 16777215U
 #define UINT24_COUNT (UINT24_MAX + 1U)
+
+#define IS_POW2(n) ((n) && (((n) & ((n) - 1)) == 0))

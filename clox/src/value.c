@@ -18,6 +18,17 @@
 
 bool valuesEqual(Value a, Value b)
 {
+#if VALUES_USE_NAN_BOXING
+
+	// NOTE (matthewp) Handle floating-point comparison properly
+
+	if (IS_NUMBER(a) && IS_NUMBER(b))
+		return (AS_NUMBER(a) == AS_NUMBER(b));
+
+	return (a == b);
+
+#else // !VALUES_USE_NAN_BOXING
+
 	ValueType typeA = VAL_TYPE(a);
 	ValueType typeB = VAL_TYPE(b);
 
@@ -39,6 +50,8 @@ bool valuesEqual(Value a, Value b)
 
 	ASSERT(false);
 	return false;
+
+#endif // !VALUES_USE_NAN_BOXING
 }
 
 static inline void printNumber(double v)

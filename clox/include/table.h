@@ -26,7 +26,7 @@ typedef struct Entry
 typedef struct Table
 {
 	int count;
-	int capacity;
+	int capacityMask;
 	Entry * aEntries;
 } Table;
 
