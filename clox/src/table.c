@@ -27,7 +27,7 @@ void initTable(Table * table)
 
 void freeTable(Table * table)
 {
-	ASSERT(IS_POW2(table->capacityMask + 1));
+	ASSERT(table->capacityMask == -1 || IS_POW2(table->capacityMask + 1));
 	CARY_FREE(Entry, table->aEntries, table->capacityMask + 1);
 	initTable(table);
 }
