@@ -19,8 +19,8 @@
 #include "debug.h"
 #endif // DEBUG_LOG_GC
 
-// #define GC_HEAP_GROW_FACTOR 1.5
-#define GC_GROW_HEAP(h) (size_t)((h) + ((h) >> 1))
+// Grow by 1.5x (h + h/2 = 1.5h)
+#define GC_GROW_HEAP(_h) (size_t)((_h) + ((_h) >> 1))
 
 
 

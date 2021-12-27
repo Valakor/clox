@@ -15,17 +15,17 @@
 
 // Basic C-style array helpers
 
-#define CARY_ALLOCATE(type, count) \
-	ALLOCATE(type, count)
+#define CARY_ALLOCATE(_type, _count) \
+	ALLOCATE(_type, _count)
 
-#define CARY_GROW_CAPACITY(capacity) \
-	((capacity) < 8 ? 8 : (capacity) * 2)
+#define CARY_GROW_CAPACITY(_cap) \
+	((_cap) < 8 ? 8 : (_cap) * 2)
 
-#define CARY_GROW(previous, type, oldCount, count) \
-	(type*)xrealloc(previous, sizeof(type) * (oldCount), sizeof(type) * (count))
+#define CARY_GROW(_previous, _type, _oldCount, _newCount) \
+	(_type*)xrealloc(_previous, sizeof(_type) * (_oldCount), sizeof(_type) * (_newCount))
 
-#define CARY_FREE(type, pointer, oldCount) \
-	xrealloc(pointer, sizeof(type) * (oldCount), 0)
+#define CARY_FREE(_type, _pointer, _count) \
+	xrealloc(_pointer, sizeof(_type) * (_count), 0)
 
 
 
@@ -44,20 +44,20 @@ typedef struct AryHdr
 //   int * aryN = NULL;
 //   Watch expression: aryN, [((AryHdr *)((uint8_t *)aryN - 8))->len]
 
-#define ARY_LEN(ary) ((ary) ? ARY__HDR(ary)->len : 0)
-#define ARY_CAP(ary) ((ary) ? ARY__HDR(ary)->cap : 0)
-#define ARY_END(ary) ((ary) + ARY_LEN(ary))
-#define ARY_TAIL(ary) (ASSERT(!ARY_EMPTY(ary)), ((ary) + ARY_LEN(ary) - 1))
-#define ARY_FREE(ary) ((ary) ? (Ary__Free(ary, sizeof(*(ary))), (ary) = NULL) : 0)
-#define ARY_PUSH(ary, x) ((ARY__ENSURECAP((ary), ARY_LEN(ary) + 1)), (ary)[ARY__HDR(ary)->len++] = (x))
-#define ARY_POP(ary) ((ARY_LEN(ary) > 0) ? ARY__HDR(ary)->len-- : 0)
-#define ARY_EMPTY(ary) (ARY_LEN(ary) == 0)
-#define ARY_CLEAR(ary) ((ary) ? ARY__HDR(ary)->len = 0 : 0)
+#define ARY_LEN(_a) ((_a) ? ARY__HDR(_a)->len : 0)
+#define ARY_CAP(_a) ((_a) ? ARY__HDR(_a)->cap : 0)
+#define ARY_END(_a) ((_a) + ARY_LEN(_a))
+#define ARY_TAIL(_a) (ASSERT(!ARY_EMPTY(_a)), ((_a) + ARY_LEN(_a) - 1))
+#define ARY_FREE(_a) ((_a) ? (Ary__Free(_a, sizeof(*(_a))), (_a) = NULL) : 0)
+#define ARY_PUSH(_a, x) ((ARY__ENSURECAP((_a), ARY_LEN(_a) + 1)), (_a)[ARY__HDR(_a)->len++] = (x))
+#define ARY_POP(_a) ((ARY_LEN(_a) > 0) ? ARY__HDR(_a)->len-- : 0)
+#define ARY_EMPTY(_a) (ARY_LEN(_a) == 0)
+#define ARY_CLEAR(_a) ((_a) ? ARY__HDR(_a)->len = 0 : 0)
 
 // Helpers
 
-#define ARY__HDR(ary) ((AryHdr *)((uint8_t *)(ary) - offsetof(AryHdr, aB)))
-#define ARY__ENSURECAP(ary, n) (((n) <= ARY_CAP(ary)) ? 0 : ((ary) = Ary__AllocGrow((ary), (n), sizeof(*(ary)))))
+#define ARY__HDR(_a) ((AryHdr *)((uint8_t *)(_a) - offsetof(AryHdr, aB)))
+#define ARY__ENSURECAP(_a, n) (((n) <= ARY_CAP(_a)) ? 0 : ((_a) = Ary__AllocGrow((_a), (n), sizeof(*(_a)))))
 
 // BB (matthewp) XCode complains about this being unused in every header that includes this, but doesn't
 //  use ARY_PUSH or other allocation functions. Find a better way to resolve this than using 'inline'
@@ -74,7 +74,7 @@ static inline void * Ary__AllocGrow(void * ary, uint32_t newCapMin, uint32_t ele
 
 	size_t sizeAlloc = newCap * elemSize + offsetof(AryHdr, aB);
 	size_t sizeAllocOld = curCap * elemSize + offsetof(AryHdr, aB);
-	
+
 	AryHdr * pHdr;
 
 	if (ary)

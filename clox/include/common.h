@@ -18,15 +18,15 @@
 
 #ifdef _MSC_VER
 #define PRINTF_LIKE(...)
-#define LIKELY(f) (f)
-#define UNLIKELY(f) (f)
+#define LIKELY(_f) (_f)
+#define UNLIKELY(_f) (_f)
 #define FUNCTION_PRETTY __FUNCSIG__
 #define TARGET_WINDOWS 1
 #define TARGET_MAC 0
 #else
-#define PRINTF_LIKE(iFormat, iArgs) __attribute__((format(printf, iFormat, iArgs)))
-#define LIKELY(f) __builtin_expect(!!(f), 1)
-#define UNLIKELY(f) __builtin_expect(!!(f), 0)
+#define PRINTF_LIKE(_iFormat, _iArgs) __attribute__((format(printf, _iFormat, _iArgs)))
+#define LIKELY(_f) __builtin_expect(!!(_f), 1)
+#define UNLIKELY(_f) __builtin_expect(!!(_f), 0)
 #define FUNCTION_PRETTY __PRETTY_FUNCTION__
 #define TARGET_WINDOWS 0
 #define TARGET_MAC 1
@@ -41,11 +41,11 @@
 
 	void DoAssert(const char * file, int line, const char * function, const char * format, ...) PRINTF_LIKE(4, 5);
 
-	#define ASSERT_MACRO(f, format, ...) \
-		(void)(LIKELY(!!(f)) || (DoAssert(__FILE__, __LINE__, FUNCTION_PRETTY, format, ##__VA_ARGS__), DEBUG_BREAK(), 0))
+	#define ASSERT_MACRO(_f, _format, ...) \
+		(void)(LIKELY(!!(_f)) || (DoAssert(__FILE__, __LINE__, FUNCTION_PRETTY, _format, ##__VA_ARGS__), DEBUG_BREAK(), 0))
 
-	#define ASSERT(f) ASSERT_MACRO(f, #f)
-	#define ASSERTMSG(f, format, ...) ASSERT_MACRO(f, format, ##__VA_ARGS__)
+	#define ASSERT(_f) ASSERT_MACRO(_f, #_f)
+	#define ASSERTMSG(_f, _format, ...) ASSERT_MACRO(_f, _format, ##__VA_ARGS__)
 #else
 	#define DEBUG_BREAK() (void)0
 
@@ -73,16 +73,16 @@
 #define DEBUG_ALLOC (DEBUG || _DEBUG)
 #endif
 
-#define CASSERT(f) static_assert(f, #f)
-#define CASSERTMSG(f, msg) static_assert(f, msg)
-#define UNUSED(x) (void)(x)
+#define CASSERT(_f) static_assert(_f, #_f)
+#define CASSERTMSG(_f, _msg) static_assert(_f, _msg)
+#define UNUSED(_x) (void)(_x)
 
-#define MIN(a, b) ((a) <= (b) ? (a) : (b))
-#define MAX(a, b) ((a) >= (b) ? (a) : (b))
+#define MIN(_a, _b) ((_a) <= (_b) ? (_a) : (_b))
+#define MAX(_a, _b) ((_a) >= (_b) ? (_a) : (_b))
 
 #define UINT8_COUNT (UINT8_MAX + 1U)
 
 #define UINT24_MAX 16777215U
 #define UINT24_COUNT (UINT24_MAX + 1U)
 
-#define IS_POW2(n) ((n) && (((n) & ((n) - 1)) == 0))
+#define IS_POW2(_n) ((_n) && (((_n) & ((_n) - 1)) == 0))
