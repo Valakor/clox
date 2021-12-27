@@ -56,15 +56,12 @@ typedef struct VM
 	//     every PUSH(...) seems very slow, perhaps auto-generated instruction
 	//     in preamble to function calls?
 
-	// BB (matthewp) Find a way to use array.h helpers here
-
 	Obj ** grayStack;
-	int grayCount;
-	int grayCapacity;
 
 	size_t bytesAllocated;
 	size_t bytesAllocatedMax;
 	size_t nextGC;
+	bool runningGC;
 } VM;
 
 extern VM vm;

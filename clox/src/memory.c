@@ -245,9 +245,10 @@ static void blackenObject(Obj* obj)
 
 static void traceReferences(void)
 {
-	while (vm.grayCount > 0)
+	while (!ARY_EMPTY(vm.grayStack))
 	{
-		Obj* obj = vm.grayStack[--vm.grayCount];
+		Obj* obj = *ARY_TAIL(vm.grayStack);
+		ARY_POP(vm.grayStack);
 		blackenObject(obj);
 	}
 }
@@ -308,15 +309,7 @@ void markObject(Obj* obj)
 
 	setIsMarked(obj, true);
 
-	if (vm.grayCapacity < vm.grayCount + 1)
-	{
-		// BB (matthewp) Use array/memory helpers here
-
-		vm.grayCapacity = CARY_GROW_CAPACITY(vm.grayCapacity);
-		vm.grayStack = realloc(vm.grayStack, sizeof(Obj*) * vm.grayCapacity);
-	}
-
-	vm.grayStack[vm.grayCount++] = obj;
+	ARY_PUSH(vm.grayStack, obj);
 }
 
 void markArray(Value* aryValue)
@@ -331,6 +324,11 @@ void markArray(Value* aryValue)
 
 void collectGarbage(void)
 {
+	if (vm.runningGC)
+		return;
+
+	vm.runningGC = true;
+
 #if DEBUG_LOG_GC
 	printf("-- gc begin\n");
 	size_t before = vm.bytesAllocated;
@@ -348,6 +346,8 @@ void collectGarbage(void)
 	size_t after = vm.bytesAllocated;
 	printf("   collected %lld bytes (from %zu to %zu) next at %zu\n", before - after, before, after, vm.nextGC);
 #endif // DEBUG_LOG_GC
+
+	vm.runningGC = false;
 }
 
 void freeObjects(void)

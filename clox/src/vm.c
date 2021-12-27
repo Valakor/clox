@@ -41,11 +41,10 @@ void initVM(void)
 	initTable(&vm.strings);
 	vm.openUpvalues = NULL;
 	vm.grayStack = NULL;
-	vm.grayCount = 0;
-	vm.grayCapacity = 0;
 	vm.bytesAllocated = 0;
 	vm.bytesAllocatedMax = 0;
 	vm.nextGC = 512 * 1024;
+	vm.runningGC = false;
 	vm.initString = copyString("init", 4);
 
 	defineNative("clock", clockNative);
