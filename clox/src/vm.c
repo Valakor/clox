@@ -43,7 +43,7 @@ void initVM(void)
 	vm.grayStack = NULL;
 	vm.bytesAllocated = 0;
 	vm.bytesAllocatedMax = 0;
-	vm.nextGC = 512 * 1024;
+	vm.nextGC = 64 * 1024;
 	vm.runningGC = false;
 	vm.initString = copyString("init", 4);
 

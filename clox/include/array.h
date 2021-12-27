@@ -19,7 +19,7 @@
 	ALLOCATE(_type, _count)
 
 #define CARY_GROW_CAPACITY(_cap) \
-	((_cap) < 8 ? 8 : (_cap) * 2)
+	((_cap) < 8 ? 8 : (_cap) + ((_cap) >> 1))
 
 #define CARY_GROW(_previous, _type, _oldCount, _newCount) \
 	(_type*)xrealloc(_previous, sizeof(_type) * (_oldCount), sizeof(_type) * (_newCount))
@@ -64,21 +64,23 @@ typedef struct AryHdr
 
 static inline void * Ary__AllocGrow(void * ary, uint32_t newCapMin, uint32_t elemSize)
 {
-	ASSERTMSG(ARY_CAP(ary) <= UINT32_MAX / 2, "Array capacity overflow");
-
 	uint32_t curCap = ARY_CAP(ary);
-	uint32_t newCap = MAX(2 * curCap, MAX(newCapMin, 8));
+	uint32_t newCap = curCap;
 
-	ASSERT(newCapMin <= newCap);
+	do
+	{
+		newCap = CARY_GROW_CAPACITY(newCap);
+	}
+	while (newCap < newCapMin);
+
 	ASSERTMSG(newCap <= (SIZE_MAX - offsetof(AryHdr, aB)) / elemSize, "Array allocation size overflow");
 
 	size_t sizeAlloc = newCap * elemSize + offsetof(AryHdr, aB);
-	size_t sizeAllocOld = curCap * elemSize + offsetof(AryHdr, aB);
-
 	AryHdr * pHdr;
 
 	if (ary)
 	{
+		size_t sizeAllocOld = curCap * elemSize + offsetof(AryHdr, aB);
 		pHdr = xrealloc(ARY__HDR(ary), sizeAllocOld, sizeAlloc);
 	}
 	else

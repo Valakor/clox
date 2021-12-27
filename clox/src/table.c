@@ -14,7 +14,9 @@
 #include "object.h"
 #include "array.h"
 
-#define TABLE_MAX_LOAD 0.75
+// Max load of 0.75 (c - c/4 = 0.75c)
+#define TABLE_LOAD_THRESHOLD(_cap) ((_cap) - ((_cap) >> 2))
+#define TABLE_GROW_CAPACITY(_cap) ((_cap) < 8 ? 8 : (_cap) * 2)
 
 
 
@@ -104,13 +106,21 @@ static inline void resizeForCount(Table * table, int newCount)
 {
 	int oldCapacity = table->capacityMask + 1;
 
-	if (newCount > oldCapacity * TABLE_MAX_LOAD)
+	if (newCount > TABLE_LOAD_THRESHOLD(oldCapacity))
 	{
-		// NOTE (matthewp) We rely on the behavior of CARY_GROW_CAPACITY giving us power-of-two sized
-		//  capacities to avoid using the modulus operator in findEntry
+		// NOTE (matthewp) We rely on the behavior of TABLE_GROW_CAPACITY giving us power-of-two
+		//  sized capacities to avoid using the modulus operator in findEntry
 
 		ASSERT(oldCapacity == 0 || IS_POW2(oldCapacity));
-		int capacity = CARY_GROW_CAPACITY(oldCapacity);
+
+		int capacity;
+
+		do
+		{
+			capacity = TABLE_GROW_CAPACITY(oldCapacity);
+		}
+		while (newCount > TABLE_LOAD_THRESHOLD(capacity));
+
 		ASSERT(IS_POW2(capacity));
 		adjustCapacity(table, capacity - 1);
 	}
