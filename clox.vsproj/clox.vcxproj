@@ -54,6 +54,7 @@
       <CompileAs>CompileAsC</CompileAs>
       <AdditionalOptions>/wd4200 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4204; 4709</DisableSpecificWarnings>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <AdditionalDependencies>DbgHelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -76,6 +77,7 @@
       <CompileAs>CompileAsC</CompileAs>
       <AdditionalOptions>/wd4200 %(AdditionalOptions)</AdditionalOptions>
       <DisableSpecificWarnings>4204; 4709</DisableSpecificWarnings>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
